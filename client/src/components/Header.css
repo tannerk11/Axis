@@ -114,6 +114,28 @@
   align-items: center;
   flex: 1;
   justify-content: flex-end;
+  gap: 12px;
+}
+
+.season-selector select {
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  background-color: var(--color-bg-secondary);
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%232c2c2c' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 0.2s;
+}
+
+.season-selector select:hover {
+  border-color: var(--color-text-tertiary);
 }
 
 .theme-toggle {

@@ -78,6 +78,10 @@ const TOOLTIPS = {
   // Defense
   opp_pts_paint_per_game: 'Opponent Points in Paint - Paint points allowed. Lower is better.',
   opp_pts_fastbreak_per_game: 'Opponent Fastbreak Points - Fastbreak points allowed. Lower is better.',
+
+  // Experimental
+  qwi: 'Quality Win Index - Weighted sum of quadrant wins minus quadrant losses. Q1W×1.0 - Q1L×0.25 + Q2W×0.6 - Q2L×0.5 + Q3W×0.3 - Q3L×0.75 + Q4W×0.1 - Q4L×1.0',
+  power_index: 'Power Index - Composite metric: 35% AdjORTG + 35% Inverted AdjDRTG + 15% SOS + 7.5% NAIA Win% + 7.5% QWI',
 };
 
 // Column definitions for each stat group
@@ -91,30 +95,10 @@ const STAT_GROUPS = {
       { key: 'adjusted_offensive_rating', label: 'AdjO', format: 'rating2', showRank: true },
       { key: 'adjusted_defensive_rating', label: 'AdjD', format: 'rating2', lowerIsBetter: true, showRank: true },
       { key: 'net_rating', label: 'NET', format: 'rating2' },
-      { key: 'strength_of_schedule', label: 'SOS', format: 'pct3' },
-      { key: 'rpi', label: 'RPI', format: 'pct3' },
+      { key: 'offensive_rating', label: 'ORTG', format: 'rating2' },
+      { key: 'defensive_rating', label: 'DRTG', format: 'rating2', lowerIsBetter: true },
     ],
     defaultSort: { key: 'adjusted_net_rating', dir: 'desc' },
-  },
-  FourFactors: {
-    columns: [
-      { key: 'games_played', label: 'GP', format: 'int' },
-      { key: 'record', label: 'Record', format: 'record', sortKey: 'wins' },
-      // Shooting (Factor 1)
-      { key: 'efg_pct', label: 'eFG%', format: 'pct1' },
-      { key: 'efg_pct_opp', label: 'Opp eFG%', format: 'pct1', lowerIsBetter: true },
-      // Turnovers (Factor 2)
-      { key: 'turnover_pct', label: 'TO%', format: 'pct1', lowerIsBetter: true },
-      { key: 'turnover_pct_opp', label: 'Opp TO%', format: 'pct1' },
-      // Rebounding (Factor 3)
-      { key: 'oreb_pct', label: 'OREB%', format: 'pct1' },
-      { key: 'dreb_pct', label: 'DREB%', format: 'pct1' },
-      { key: 'oreb_pct_opp', label: 'Opp OREB%', format: 'pct1', lowerIsBetter: true },
-      // Free Throws (Factor 4)
-      { key: 'ft_rate', label: 'FT Rate', format: 'pct1' },
-      { key: 'ft_pct', label: 'FT%', format: 'pct1' },
-    ],
-    defaultSort: { key: 'efg_pct', dir: 'desc' },
   },
   Shooting: {
     columns: [
@@ -180,15 +164,22 @@ const STAT_GROUPS = {
       { key: 'games_played', label: 'GP', format: 'int' },
       { key: 'record', label: 'Record', format: 'record', sortKey: 'wins' },
       { key: 'win_pct', label: 'NAIA Win%', format: 'pct3' },
-      { key: 'strength_of_schedule', label: 'SOS', format: 'pct3' },
-      { key: 'nsos', label: 'Net SOS', format: 'rating' },
-      { key: 'osos', label: 'Off SOS', format: 'rating' },
-      { key: 'dsos', label: 'Def SOS', format: 'rating' },
-      { key: 'rpi', label: 'RPI', format: 'pct3' },
+      { key: 'nsos', label: 'Net SOS', format: 'rating2' },
+      { key: 'osos', label: 'Off SOS', format: 'rating2' },
+      { key: 'dsos', label: 'Def SOS', format: 'rating2' },
       { key: 'opponent_win_pct', label: 'Opp Win%', format: 'pct1' },
       { key: 'opponent_opponent_win_pct', label: "Opp's Opp Win%", format: 'pct1' },
     ],
-    defaultSort: { key: 'strength_of_schedule', dir: 'desc' },
+    defaultSort: { key: 'nsos', dir: 'desc' },
+  },
+  Experimental: {
+    columns: [
+      { key: 'games_played', label: 'GP', format: 'int' },
+      { key: 'record', label: 'Record', format: 'record', sortKey: 'wins' },
+      { key: 'qwi', label: 'QWI', format: 'rating2' },
+      { key: 'power_index', label: 'Power Index', format: 'rating2' },
+    ],
+    defaultSort: { key: 'power_index', dir: 'desc' },
   },
 };
 

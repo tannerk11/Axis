@@ -1,18 +1,8 @@
 import './FilterBar.css';
 
-function FilterBar({ conferences, months, filters, onFilterChange, onApply, onReset }) {
+function FilterBar({ conferences, months, filters, onFilterChange, onReset }) {
   return (
     <div className="filter-bar">
-      <div className="filter-group">
-        <label>Season</label>
-        <select
-          value={filters.season}
-          onChange={(e) => onFilterChange('season', e.target.value)}
-        >
-          <option value="2025-26">2025-26</option>
-        </select>
-      </div>
-
       <div className="filter-group">
         <label>Conference</label>
         <select
@@ -59,24 +49,7 @@ function FilterBar({ conferences, months, filters, onFilterChange, onApply, onRe
         </select>
       </div>
 
-      <div className="filter-group">
-        <label>Stat Group</label>
-        <select
-          value={filters.statGroup}
-          onChange={(e) => onFilterChange('statGroup', e.target.value)}
-        >
-          <option value="Overview">Overview</option>
-          <option value="FourFactors">Advanced Analytics</option>
-          <option value="Shooting">Shooting</option>
-          <option value="Rebounding">Rebounding</option>
-          <option value="Playmaking">Playmaking</option>
-          <option value="Defense">Defense</option>
-          <option value="Schedule">Schedule</option>
-        </select>
-      </div>
-
       <div className="filter-actions">
-        <button className="apply-btn" onClick={onApply}>Apply Filters</button>
         <button className="reset-btn" onClick={onReset}>Reset</button>
       </div>
     </div>

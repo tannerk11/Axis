@@ -1,15 +1,15 @@
 /**
  * NAIA Data Import Script
- * 
+ *
  * This script fetches team JSON data from the URLs collected by the scraper
  * and imports the data into PostgreSQL.
- * 
+ *
  * Tables populated:
  * - teams: Team information (name, conference, etc.)
  * - games: Individual game results
  * - team_ratings: Calculated team statistics (to be computed separately)
- * 
- * Usage: node import-data.js
+ *
+ * Usage: node import-data.js [--season 2024-25]
  */
 
 require('dotenv').config();
@@ -17,8 +17,13 @@ const { Client } = require('pg');
 const https = require('https');
 const fs = require('fs');
 
+// Parse --season argument (default: 2025-26)
+const args = process.argv.slice(2);
+const seasonIdx = args.indexOf('--season');
+const SEASON = seasonIdx !== -1 && args[seasonIdx + 1] ? args[seasonIdx + 1] : '2025-26';
+
 // Configuration
-const TEAM_URLS_FILE = 'team-urls.json';
+const TEAM_URLS_FILE = `team-urls-${SEASON}.json`;
 const CONCURRENT_REQUESTS = 5;  // Fetch 5 teams at a time
 const DELAY_BETWEEN_BATCHES = 300;  // ms
 
@@ -238,19 +243,19 @@ function extractGames(json, teamId) {
  */
 async function upsertTeam(client, team) {
   if (!team.team_id) return null;
-  
+
   const query = `
-    INSERT INTO teams (team_id, name, league, conference, json_url, primary_color, secondary_color, logo_url, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)
-    ON CONFLICT (team_id) 
-    DO UPDATE SET 
+    INSERT INTO teams (team_id, name, league, conference, json_url, primary_color, secondary_color, logo_url, season, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP)
+    ON CONFLICT (team_id, season)
+    DO UPDATE SET
       name = EXCLUDED.name,
       league = EXCLUDED.league,
       json_url = EXCLUDED.json_url,
       updated_at = CURRENT_TIMESTAMP
     RETURNING id
   `;
-  
+
   const result = await client.query(query, [
     team.team_id,
     team.name,
@@ -259,9 +264,10 @@ async function upsertTeam(client, team) {
     team.json_url,
     team.primary_color,
     team.secondary_color,
-    team.logo_url
+    team.logo_url,
+    SEASON
   ]);
-  
+
   return result.rows[0]?.id;
 }
 
@@ -275,7 +281,7 @@ async function upsertGames(client, games) {
   for (const game of games) {
     const query = `
       INSERT INTO games (
-        game_id, team_id, opponent_id, opponent_name, game_date, location, 
+        game_id, team_id, opponent_id, opponent_name, game_date, location,
         team_score, opponent_score, is_completed, is_conference, is_postseason, is_exhibition, event_id,
         fgm, fga, fg_pct, fgm3, fga3, fg3_pct, ftm, fta, ft_pct,
         oreb, dreb, treb, ast, stl, blk, turnovers, pf,
@@ -284,7 +290,7 @@ async function upsertGames(client, games) {
         opp_oreb, opp_dreb, opp_treb, opp_ast, opp_stl, opp_blk, opp_turnovers, opp_pf,
         opp_pts_paint, opp_pts_fastbreak, opp_pts_bench, opp_pts_turnovers, opp_possessions,
         first_half_score, second_half_score, opp_first_half_score, opp_second_half_score,
-        updated_at
+        season, updated_at
       )
       VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
@@ -295,10 +301,10 @@ async function upsertGames(client, games) {
         $45, $46, $47, $48, $49, $50, $51, $52,
         $53, $54, $55, $56, $57,
         $58, $59, $60, $61,
-        CURRENT_TIMESTAMP
+        $62, CURRENT_TIMESTAMP
       )
-      ON CONFLICT (game_id) 
-      DO UPDATE SET 
+      ON CONFLICT (game_id, season)
+      DO UPDATE SET
         team_score = EXCLUDED.team_score,
         opponent_score = EXCLUDED.opponent_score,
         is_completed = EXCLUDED.is_completed,
@@ -345,7 +351,8 @@ async function upsertGames(client, games) {
         game.opp_oreb, game.opp_dreb, game.opp_treb, game.opp_ast, game.opp_stl, game.opp_blk,
         game.opp_turnovers, game.opp_pf,
         game.opp_pts_paint, game.opp_pts_fastbreak, game.opp_pts_bench, game.opp_pts_turnovers, game.opp_possessions,
-        game.first_half_score, game.second_half_score, game.opp_first_half_score, game.opp_second_half_score
+        game.first_half_score, game.second_half_score, game.opp_first_half_score, game.opp_second_half_score,
+        SEASON
       ]);
       
       if (result.rows[0]?.inserted) {
@@ -449,6 +456,7 @@ async function processTeamsInBatches(client, urls, league) {
 async function main() {
   console.log('='.repeat(60));
   console.log('NAIA Data Import');
+  console.log(`Season: ${SEASON}`);
   console.log('='.repeat(60));
   
   // Load team URLs
@@ -504,28 +512,31 @@ async function main() {
     console.log(`Total teams in DB: ${teamCount.rows[0].count}`);
     console.log(`Total games in DB: ${gameCount.rows[0].count}`);
     
-    // Mark NAIA games (opponent exists in teams table and is not excluded)
+    // Mark NAIA games (opponent exists in teams table and is not excluded) for this season only
     console.log('\n🏀 MARKING NAIA GAMES');
     console.log('-'.repeat(40));
-    
-    // First set all to non-NAIA
-    await client.query(`UPDATE games SET is_naia_game = FALSE`);
-    
-    // Then mark games where opponent is a valid NAIA team
+
+    // First set all games for this season to non-NAIA
+    await client.query(`UPDATE games SET is_naia_game = FALSE WHERE season = $1`, [SEASON]);
+
+    // Then mark games where opponent is a valid NAIA team (same season)
     const naiaResult = await client.query(`
       UPDATE games g
       SET is_naia_game = TRUE
       FROM teams t
       WHERE g.opponent_id = t.team_id
         AND t.is_excluded = FALSE
-    `);
-    
+        AND g.season = $1
+        AND t.season = $1
+    `, [SEASON]);
+
     const naiaCounts = await client.query(`
-      SELECT 
+      SELECT
         COUNT(*) FILTER (WHERE is_naia_game = TRUE) as naia,
         COUNT(*) FILTER (WHERE is_naia_game = FALSE) as non_naia
       FROM games
-    `);
+      WHERE season = $1
+    `, [SEASON]);
     
     console.log(`NAIA games: ${naiaCounts.rows[0].naia}`);
     console.log(`Non-NAIA games: ${naiaCounts.rows[0].non_naia}`);

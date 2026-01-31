@@ -1,14 +1,14 @@
 /**
  * NAIA Basketball Advanced Analytics Calculator
- * 
+ *
  * Calculates all advanced metrics from team JSON data:
  * - Efficiency ratings (ORTG, DRTG, Net Rating)
  * - Adjusted ratings (KenPom-style with SOS adjustment)
  * - RPI and Strength of Schedule
  * - Shooting metrics (eFG%, FT Rate, 3PT Rate)
  * - Turnover and rebounding percentages
- * 
- * Usage: node calculate-analytics.js
+ *
+ * Usage: node calculate-analytics.js [--season 2024-25]
  */
 
 require('dotenv').config();
@@ -17,11 +17,16 @@ const https = require('https');
 const fs = require('fs');
 const excludedTeamsConfig = require('./config/excluded-teams');
 
+// Parse --season argument (default: 2025-26)
+const args = process.argv.slice(2);
+const seasonIdx = args.indexOf('--season');
+const SEASON = seasonIdx !== -1 && args[seasonIdx + 1] ? args[seasonIdx + 1] : '2025-26';
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
-const TEAM_URLS_FILE = 'team-urls.json';
+const TEAM_URLS_FILE = `team-urls-${SEASON}.json`;
 const CONCURRENT_REQUESTS = 10;
 const DELAY_BETWEEN_BATCHES = 200;
 
@@ -714,19 +719,19 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
   const rpi = rpiData[teamId] || {};
   const adjusted = adjustedData[teamId] || {};
   
-  // Update teams table with basic info
+  // Update teams table with basic info (season-aware)
   await client.query(`
     UPDATE teams SET
       updated_at = CURRENT_TIMESTAMP
-    WHERE team_id = $1
-  `, [teamId]);
-  
+    WHERE team_id = $1 AND season = $2
+  `, [teamId, SEASON]);
+
   // Insert or update team_ratings with ALL metrics
   const today = new Date().toISOString().split('T')[0];
-  
+
   await client.query(`
     INSERT INTO team_ratings (
-      team_id, date_calculated,
+      team_id, date_calculated, season,
       games_played, wins, losses, win_pct,
       points_per_game, points_allowed_per_game,
       offensive_rating, defensive_rating, net_rating,
@@ -743,9 +748,9 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
       $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
       $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-      $31, $32, $33, $34, $35, $36, $37, $38, $39
+      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
     )
-    ON CONFLICT (team_id, date_calculated) DO UPDATE SET
+    ON CONFLICT (team_id, date_calculated, season) DO UPDATE SET
       games_played = EXCLUDED.games_played,
       wins = EXCLUDED.wins,
       losses = EXCLUDED.losses,
@@ -786,43 +791,44 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
   `, [
     teamId,                                    // $1
     today,                                     // $2
-    metrics.gamesPlayed,                       // $3
-    metrics.wins,                              // $4
-    metrics.losses,                            // $5
-    metrics.winPct,                            // $6
-    metrics.ppg,                               // $7
-    metrics.ppgOpp,                            // $8
-    metrics.ortg,                              // $9
-    metrics.drtg,                              // $10
-    metrics.netRtg,                            // $11
-    adjusted.adjORTG || metrics.ortg,          // $12
-    adjusted.adjDRTG || metrics.drtg,          // $13
-    adjusted.adjNRTG || metrics.netRtg,        // $14
-    metrics.fgPct,                             // $15
-    metrics.fg3Pct,                            // $16
-    metrics.ftPct,                             // $17
-    metrics.efgPct,                            // $18
-    metrics.fgPctOpp,                          // $19
-    metrics.fg3PctOpp,                         // $20
-    metrics.efgPctOpp,                         // $21
-    metrics.toPct,                             // $22
-    metrics.toPctOpp,                          // $23
-    metrics.orebPct,                           // $24
-    metrics.drebPct,                           // $25
-    metrics.orebPctOpp,                        // $26
-    metrics.drebPctOpp,                        // $27
-    metrics.ftRate,                            // $28
-    metrics.threePtRate,                       // $29
-    rpi.rpi || 0,                              // $30
-    rpi.naiaWins || 0,                         // $31
-    rpi.naiaLosses || 0,                       // $32
-    rpi.naiaWinPct || 0,                       // $33
-    rpi.sos || 0,                              // $34
-    rpi.owp || 0,                              // $35
-    rpi.oowp || 0,                             // $36
-    adjusted.osos || 0,                        // $37
-    adjusted.dsos || 0,                        // $38
-    adjusted.nsos || 0                         // $39
+    SEASON,                                    // $3
+    metrics.gamesPlayed,                       // $4
+    metrics.wins,                              // $5
+    metrics.losses,                            // $6
+    metrics.winPct,                            // $7
+    metrics.ppg,                               // $8
+    metrics.ppgOpp,                            // $9
+    metrics.ortg,                              // $10
+    metrics.drtg,                              // $11
+    metrics.netRtg,                            // $12
+    adjusted.adjORTG || metrics.ortg,          // $13
+    adjusted.adjDRTG || metrics.drtg,          // $14
+    adjusted.adjNRTG || metrics.netRtg,        // $15
+    metrics.fgPct,                             // $16
+    metrics.fg3Pct,                            // $17
+    metrics.ftPct,                             // $18
+    metrics.efgPct,                            // $19
+    metrics.fgPctOpp,                          // $20
+    metrics.fg3PctOpp,                         // $21
+    metrics.efgPctOpp,                         // $22
+    metrics.toPct,                             // $23
+    metrics.toPctOpp,                          // $24
+    metrics.orebPct,                           // $25
+    metrics.drebPct,                           // $26
+    metrics.orebPctOpp,                        // $27
+    metrics.drebPctOpp,                        // $28
+    metrics.ftRate,                            // $29
+    metrics.threePtRate,                       // $30
+    rpi.rpi || 0,                              // $31
+    rpi.naiaWins || 0,                         // $32
+    rpi.naiaLosses || 0,                       // $33
+    rpi.naiaWinPct || 0,                       // $34
+    rpi.sos || 0,                              // $35
+    rpi.owp || 0,                              // $36
+    rpi.oowp || 0,                             // $37
+    adjusted.osos || 0,                        // $38
+    adjusted.dsos || 0,                        // $39
+    adjusted.nsos || 0                         // $40
   ]);
 }
 
@@ -833,6 +839,7 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
 async function main() {
   console.log('='.repeat(60));
   console.log('NAIA Advanced Analytics Calculator');
+  console.log(`Season: ${SEASON}`);
   console.log('='.repeat(60));
   
   // Load team URLs

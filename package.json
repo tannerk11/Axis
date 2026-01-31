@@ -13,7 +13,13 @@
     "analytics": "node calculate-analytics.js",
     "conferences": "node scrape-conferences.js",
     "setup-db": "node setup-database.js",
-    "refresh": "npm run scrape && npm run import && npm run conferences && npm run analytics"
+    "migrate": "node migrate-add-season.js",
+    "refresh": "npm run scrape && npm run import && npm run conferences && npm run analytics",
+    "scrape:2024": "node scrape-team-urls.js --season 2024-25",
+    "import:2024": "node import-data.js --season 2024-25",
+    "conferences:2024": "node scrape-conferences.js --season 2024-25",
+    "analytics:2024": "node calculate-analytics.js --season 2024-25",
+    "refresh:2024": "npm run scrape:2024 && npm run import:2024 && npm run conferences:2024 && npm run analytics:2024"
   },
   "engines": {
     "node": "18.x"

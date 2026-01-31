@@ -1,13 +1,20 @@
 /**
  * Conference Scraper
- * 
+ *
  * Scrapes NAIA stats to get conference assignments for each team
  * and updates the teams table in the database.
+ *
+ * Usage: node scrape-conferences.js [--season 2024-25]
  */
 
 require('dotenv').config();
 const https = require('https');
 const { Client } = require('pg');
+
+// Parse --season argument (default: 2025-26)
+const args = process.argv.slice(2);
+const seasonIdx = args.indexOf('--season');
+const SEASON = seasonIdx !== -1 && args[seasonIdx + 1] ? args[seasonIdx + 1] : '2025-26';
 
 const CONFERENCES = {
   mens: [
@@ -71,13 +78,13 @@ function fetchHtml(url) {
 
 async function getTeamsInConference(sport, confSlug) {
   const sportCode = sport === 'mens' ? 'mbkb' : 'wbkb';
-  const url = `https://naiastats.prestosports.com/sports/${sportCode}/2024-25/conf/${confSlug}/teams?view=teamstats&r=0&pos=`;
-  
+  const url = `https://naiastats.prestosports.com/sports/${sportCode}/${SEASON}/conf/${confSlug}/teams?view=teamstats&r=0&pos=`;
+
   try {
     const html = await fetchHtml(url);
-    
-    // Extract team names from links like: <a href="/sports/mbkb/2024-25/conf/Crossroads/teams/gracein">Grace (Ind.)</a>
-    const teamPattern = /<a href="\/sports\/[mw]bkb\/2024-25\/conf\/[^/]+\/teams\/[^"]+">([^<]+)<\/a>/g;
+
+    // Extract team names from links like: <a href="/sports/mbkb/{SEASON}/conf/Crossroads/teams/gracein">Grace (Ind.)</a>
+    const teamPattern = new RegExp(`<a href="/sports/[mw]bkb/${SEASON}/conf/[^/]+/teams/[^"]+">([^<]+)</a>`, 'g');
     const teams = new Set();
     let match;
     
@@ -98,6 +105,7 @@ async function getTeamsInConference(sport, confSlug) {
 async function main() {
   console.log('='.repeat(60));
   console.log('Conference Assignment Scraper');
+  console.log(`Season: ${SEASON}`);
   console.log('='.repeat(60));
   
   const client = new Client({
@@ -150,26 +158,26 @@ async function main() {
     
     let updated = 0;
     
-    // Update men's teams by name
+    // Update men's teams by name (season-aware)
     for (const [key, data] of Object.entries(teamConferences)) {
       if (data.league === 'mens') {
         const result = await client.query(`
-          UPDATE teams 
+          UPDATE teams
           SET conference = $1, updated_at = CURRENT_TIMESTAMP
-          WHERE name = $2 AND league = 'mens'
-        `, [data.conference, key]);
-        
+          WHERE name = $2 AND league = 'mens' AND season = $3
+        `, [data.conference, key, SEASON]);
+
         if (result.rowCount > 0) {
           updated += result.rowCount;
         }
       } else {
         // Women's teams
         const result = await client.query(`
-          UPDATE teams 
+          UPDATE teams
           SET conference = $1, updated_at = CURRENT_TIMESTAMP
-          WHERE name = $2 AND league = 'womens'
-        `, [data.conference, data.name]);
-        
+          WHERE name = $2 AND league = 'womens' AND season = $3
+        `, [data.conference, data.name, SEASON]);
+
         if (result.rowCount > 0) {
           updated += result.rowCount;
         }
@@ -182,10 +190,10 @@ async function main() {
     const summary = await client.query(`
       SELECT conference, league, COUNT(*) as count
       FROM teams
-      WHERE conference IS NOT NULL
+      WHERE conference IS NOT NULL AND season = $1
       GROUP BY conference, league
       ORDER BY league, conference
-    `);
+    `, [SEASON]);
     
     console.log('\n📋 CONFERENCE SUMMARY');
     console.log('-'.repeat(40));
@@ -201,8 +209,8 @@ async function main() {
     
     // Check for teams without conferences
     const noConf = await client.query(`
-      SELECT name, league FROM teams WHERE conference IS NULL
-    `);
+      SELECT name, league FROM teams WHERE conference IS NULL AND season = $1
+    `, [SEASON]);
     
     if (noConf.rows.length > 0) {
       console.log(`\n⚠️  ${noConf.rows.length} teams without conference assignment:`);

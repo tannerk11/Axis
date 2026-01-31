@@ -93,11 +93,21 @@
   --color-loss-bg: #ffebee;
   --color-loss-text: #c62828;
 
-  /* Quadrant indicators */
+  /* Quadrant indicators (used for net rating +/-) */
   --color-quad-good-bg: #e8f5e9;
   --color-quad-good-text: #2e7d32;
   --color-quad-bad-bg: #ffebee;
   --color-quad-bad-text: #c62828;
+
+  /* Quadrant badge colors (gold → teal → slate → light gray) */
+  --color-quad-1-bg: rgba(217, 169, 56, 0.18);
+  --color-quad-1-text: #92400e;
+  --color-quad-2-bg: rgba(20, 184, 166, 0.14);
+  --color-quad-2-text: #0f766e;
+  --color-quad-3-bg: rgba(100, 116, 139, 0.14);
+  --color-quad-3-text: #64748b;
+  --color-quad-4-bg: rgba(148, 163, 184, 0.10);
+  --color-quad-4-text: #94a3b8;
 
   /* Modal */
   --color-modal-overlay: rgba(0, 0, 0, 0.5);

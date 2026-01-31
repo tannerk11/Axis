@@ -18,20 +18,6 @@ const STAT_GROUPS = {
       { key: 'points_allowed_per_game', label: 'PAPG', format: 'rating' },
     ],
   },
-  FourFactors: {
-    columns: [
-      { key: 'games_played', label: 'GP', format: 'int' },
-      { key: 'record', label: 'Record', format: 'record' },
-      { key: 'efg_pct', label: 'eFG%', format: 'pct1' },
-      { key: 'efg_pct_opp', label: 'Opp eFG%', format: 'pct1' },
-      { key: 'turnover_pct', label: 'TO%', format: 'pct1' },
-      { key: 'turnover_pct_opp', label: 'Opp TO%', format: 'pct1' },
-      { key: 'oreb_pct', label: 'OREB%', format: 'pct1' },
-      { key: 'dreb_pct', label: 'DREB%', format: 'pct1' },
-      { key: 'ft_rate', label: 'FT Rate', format: 'pct1' },
-      { key: 'ft_pct', label: 'FT%', format: 'pct1' },
-    ],
-  },
   Shooting: {
     columns: [
       { key: 'games_played', label: 'GP', format: 'int' },
@@ -43,6 +29,7 @@ const STAT_GROUPS = {
       { key: 'fg3_pct', label: '3P%', format: 'pct1' },
       { key: 'ft_pct', label: 'FT%', format: 'pct1' },
       { key: 'three_pt_rate', label: '3P Rate', format: 'pct1' },
+      { key: 'ft_rate', label: 'FT Rate', format: 'pct1' },
       { key: 'pts_paint_per_game', label: 'Paint', format: 'rating' },
       { key: 'pts_fastbreak_per_game', label: 'FB', format: 'rating' },
     ],
@@ -56,6 +43,7 @@ const STAT_GROUPS = {
       { key: 'dreb_per_game', label: 'DRPG', format: 'rating' },
       { key: 'oreb_pct', label: 'OREB%', format: 'pct1' },
       { key: 'dreb_pct', label: 'DREB%', format: 'pct1' },
+      { key: 'oreb_pct_opp', label: 'Opp OREB%', format: 'pct1' },
       { key: 'stl_per_game', label: 'SPG', format: 'rating' },
       { key: 'blk_per_game', label: 'BPG', format: 'rating' },
     ],
@@ -88,7 +76,7 @@ const STAT_GROUPS = {
   },
 };
 
-function TeamModal({ team, onClose }) {
+function TeamModal({ team, season = '2025-26', onClose }) {
   const [splits, setSplits] = useState([]);
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,8 +89,8 @@ function TeamModal({ team, onClose }) {
       setLoading(true);
       try {
         const [splitsRes, scheduleRes] = await Promise.all([
-          fetch(`${API_URL}/api/teams/${team.team_id}/splits`),
-          fetch(`${API_URL}/api/teams/${team.team_id}/schedule`)
+          fetch(`${API_URL}/api/teams/${team.team_id}/splits?season=${season}`),
+          fetch(`${API_URL}/api/teams/${team.team_id}/schedule?season=${season}`)
         ]);
         const splitsData = await splitsRes.json();
         const scheduleData = await scheduleRes.json();
@@ -118,7 +106,7 @@ function TeamModal({ team, onClose }) {
     };
 
     fetchData();
-  }, [team]);
+  }, [team, season]);
 
   // Close on escape key
   useEffect(() => {
@@ -209,7 +197,6 @@ function TeamModal({ team, onClose }) {
               <label>Stat Group</label>
               <select value={statGroup} onChange={(e) => setStatGroup(e.target.value)}>
                 <option value="Overview">Overview</option>
-                <option value="FourFactors">Four Factors</option>
                 <option value="Shooting">Shooting</option>
                 <option value="Rebounding">Rebounding</option>
                 <option value="Playmaking">Playmaking</option>
@@ -263,8 +250,10 @@ function TeamModal({ team, onClose }) {
                     <th className="col-location">Loc</th>
                     <th className="col-opponent">Opponent</th>
                     <th className="col-type">Type</th>
+                    <th className="col-quad">Quad</th>
                     <th className="col-result">Result</th>
                     <th className="col-score">Score</th>
+                    <th className="col-net-rating">NET</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +273,13 @@ function TeamModal({ team, onClose }) {
                           {game.game_type}
                         </span>
                       </td>
+                      <td className="col-quad">
+                        {game.quadrant ? (
+                          <span className={`quad-badge quad-${game.quadrant}`}>
+                            Q{game.quadrant}
+                          </span>
+                        ) : '-'}
+                      </td>
                       <td className="col-result">
                         {game.is_completed ? (
                           <span className={`result-${game.result === 'W' ? 'win' : 'loss'}`}>
@@ -295,6 +291,13 @@ function TeamModal({ team, onClose }) {
                       </td>
                       <td className="col-score">
                         {game.is_completed ? `${game.team_score}-${game.opponent_score}` : '-'}
+                      </td>
+                      <td className="col-net-rating">
+                        {game.is_completed && game.net_rating !== null ? (
+                          <span className={game.net_rating >= 0 ? 'net-positive' : 'net-negative'}>
+                            {game.net_rating > 0 ? '+' : ''}{game.net_rating.toFixed(1)}
+                          </span>
+                        ) : '-'}
                       </td>
                     </tr>
                   ))}

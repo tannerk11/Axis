@@ -45,7 +45,7 @@ const COLUMNS = [
   { key: 'oowp', label: 'OOWP', sortKey: 'oowp' },
 ];
 
-function Bracketcast({ league, onTeamClick }) {
+function Bracketcast({ league, season, onTeamClick }) {
   const [data, setData] = useState({ teams: [], bracket: {}, pods: [] });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('table'); // 'table', 'bracket', or 'pods'
@@ -55,7 +55,7 @@ function Bracketcast({ league, onTeamClick }) {
     const fetchBracketcast = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${API_URL}/api/bracketcast?league=${league}`);
+        const response = await fetch(`${API_URL}/api/bracketcast?league=${league}&season=${season}`);
         const result = await response.json();
         setData(result);
       } catch (error) {
@@ -66,7 +66,7 @@ function Bracketcast({ league, onTeamClick }) {
     };
 
     fetchBracketcast();
-  }, [league]);
+  }, [league, season]);
 
   const handleSort = (col) => {
     const sortKey = col.sortKey || col.key;

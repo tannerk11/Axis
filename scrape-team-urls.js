@@ -1,23 +1,28 @@
 /**
  * NAIA Team JSON URL Scraper (Fast Version)
- * 
+ *
  * This script extracts team JSON URLs directly from HTML source using simple HTTP requests.
  * Much faster than Puppeteer since we don't need to render JavaScript.
- * 
+ *
  * The JSON URLs are embedded in the team page HTML, so we can use curl/fetch to get them.
- * 
- * Usage: node scrape-team-urls.js
- * Output: team-urls.json
+ *
+ * Usage: node scrape-team-urls.js [--season 2024-25]
+ * Output: team-urls-{season}.json
  */
 
 const fs = require('fs');
 const https = require('https');
 
+// Parse --season argument (default: 2025-26)
+const args = process.argv.slice(2);
+const seasonIdx = args.indexOf('--season');
+const SEASON = seasonIdx !== -1 && args[seasonIdx + 1] ? args[seasonIdx + 1] : '2025-26';
+
 // Configuration
 const BASE_URL = 'https://naiastats.prestosports.com';
 const LEAGUES = {
-  mens: '/sports/mbkb/2025-26/teams?view=teamstats&r=0&pos=',
-  womens: '/sports/wbkb/2025-26/teams?view=teamstats&r=0&pos='
+  mens: `/sports/mbkb/${SEASON}/teams?view=teamstats&r=0&pos=`,
+  womens: `/sports/wbkb/${SEASON}/teams?view=teamstats&r=0&pos=`
 };
 
 // Rate limiting - be nice to the server
@@ -136,13 +141,15 @@ async function main() {
   console.log('NAIA Team JSON URL Scraper (Fast Version)');
   console.log('='.repeat(60));
   
+  console.log(`Season: ${SEASON}`);
+
   const startTime = Date.now();
   const results = {
     mens: [],
     womens: [],
     metadata: {
       scrapedAt: new Date().toISOString(),
-      season: '2025-26'
+      season: SEASON
     }
   };
   
@@ -161,8 +168,8 @@ async function main() {
     results.womens = await processTeamsInBatches(womensData.slugs, womensData.sportPath);
     console.log(`✅ Women's: ${results.womens.length} JSON URLs collected`);
     
-    // Save results
-    const outputPath = 'team-urls.json';
+    // Save results (per-season file)
+    const outputPath = `team-urls-${SEASON}.json`;
     fs.writeFileSync(outputPath, JSON.stringify(results, null, 2));
     
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);

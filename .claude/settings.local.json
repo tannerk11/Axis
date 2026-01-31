@@ -21,7 +21,18 @@
       "Bash(node migrate-add-location.js:*)",
       "Bash(node populate-locations.js:*)",
       "Bash(node --check:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(node:*)",
+      "Bash(npm run analytics:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(render deploys create:*)",
+      "Bash(ls:*)",
+      "Bash(python3:*)",
+      "Bash(npx vite:*)",
+      "Bash(xargs kill:*)"
     ]
   }
 }

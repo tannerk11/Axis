@@ -44,22 +44,6 @@
   margin-left: auto;
 }
 
-.apply-btn {
-  padding: 10px 20px;
-  background-color: var(--color-accent-primary);
-  color: var(--color-text-inverted);
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.apply-btn:hover {
-  background-color: var(--color-accent-primary-hover);
-}
-
 .reset-btn {
   padding: 10px 20px;
   background-color: var(--color-bg-secondary);
@@ -104,7 +88,6 @@
     margin-top: 4px;
   }
 
-  .apply-btn,
   .reset-btn {
     flex: 1;
     padding: 10px 12px;

@@ -29,6 +29,9 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'client/dist')));
 }
 
+// Default season constant
+const DEFAULT_SEASON = '2025-26';
+
 /**
  * Calculate team stats dynamically from games table based on filters
  * @param {Pool} pool - PostgreSQL connection pool
@@ -37,6 +40,7 @@ if (process.env.NODE_ENV === 'production') {
  * @param {string} filters.conference - Conference name or 'All Conferences'
  * @param {string} filters.gameType - 'all' for all NAIA games, 'conference' for conference games only
  * @param {string} filters.seasonSegment - 'all', 'last10', 'last5', 'last3', or 'YYYY-MM' for specific month
+ * @param {string} filters.season - Season identifier (e.g., '2025-26')
  * @returns {Promise<QueryResult>} - PostgreSQL query result
  */
 async function calculateDynamicStats(pool, filters) {
@@ -45,10 +49,11 @@ async function calculateDynamicStats(pool, filters) {
     conference,
     gameType = 'all',
     seasonSegment = 'all',
+    season = DEFAULT_SEASON,
   } = filters;
 
   // Build the WHERE clause for game filtering
-  const gameFilters = ['g.is_naia_game = true', 'g.is_completed = true'];
+  const gameFilters = ['g.is_naia_game = true', 'g.is_completed = true', `g.season = '${season.replace(/'/g, "''")}'`];
   if (gameType === 'conference') {
     gameFilters.push('g.is_conference = true');
   }
@@ -349,9 +354,11 @@ async function calculateDynamicStats(pool, filters) {
       ROUND((gs.total_opp_pts_off_to::float / NULLIF(gs.games_played, 0))::numeric, 1) as opp_pts_off_to_per_game
     FROM teams t
     JOIN game_stats gs ON t.team_id = gs.team_id
-    LEFT JOIN team_ratings tr ON t.team_id = tr.team_id 
-      AND tr.date_calculated = (SELECT MAX(date_calculated) FROM team_ratings)
+    LEFT JOIN team_ratings tr ON t.team_id = tr.team_id
+      AND tr.season = t.season
+      AND tr.date_calculated = (SELECT MAX(date_calculated) FROM team_ratings WHERE season = t.season)
     WHERE t.league = $1
+    AND t.season = '${season.replace(/'/g, "''")}'
     ${conferenceClause}
     ORDER BY adjusted_net_rating DESC NULLS LAST
   `;
@@ -367,10 +374,103 @@ app.get('/api/teams', async (req, res) => {
       conference,
       gameType = 'all',
       seasonSegment = 'all',
+      season = DEFAULT_SEASON,
     } = req.query;
 
-    const result = await calculateDynamicStats(pool, { league, conference, gameType, seasonSegment });
-    res.json(result.rows);
+    const result = await calculateDynamicStats(pool, { league, conference, gameType, seasonSegment, season });
+    let teams = result.rows;
+
+    // Add QWI and Power Index when viewing full-season unfiltered data
+    const usePreCalculated = gameType === 'all' && seasonSegment === 'all';
+    if (usePreCalculated) {
+      try {
+        // Get RPI rankings for quadrant assignment
+        const rpiResult = await pool.query(`
+          SELECT t.team_id, tr.rpi
+          FROM teams t
+          LEFT JOIN team_ratings tr ON t.team_id = tr.team_id
+            AND tr.season = t.season
+            AND tr.date_calculated = (SELECT MAX(date_calculated) FROM team_ratings WHERE season = $2)
+          WHERE t.league = $1
+            AND t.season = $2
+            AND t.is_excluded = FALSE
+          ORDER BY tr.rpi DESC NULLS LAST
+        `, [league, season]);
+
+        const rpiRanks = {};
+        rpiResult.rows.forEach((row, idx) => {
+          rpiRanks[row.team_id] = row.rpi ? idx + 1 : null;
+        });
+
+        // Get all completed NAIA games for quadrant calculation
+        const gamesResult = await pool.query(`
+          SELECT g.team_id, g.opponent_id, g.location, g.team_score, g.opponent_score
+          FROM games g
+          JOIN teams t ON g.team_id = t.team_id
+          WHERE t.league = $1
+            AND g.season = $2
+            AND g.is_naia_game = TRUE
+            AND g.is_completed = TRUE
+        `, [league, season]);
+
+        // Tally quadrant records per team
+        const quadrantRecords = {};
+        teams.forEach(t => {
+          quadrantRecords[t.team_id] = {
+            q1_wins: 0, q1_losses: 0,
+            q2_wins: 0, q2_losses: 0,
+            q3_wins: 0, q3_losses: 0,
+            q4_wins: 0, q4_losses: 0,
+          };
+        });
+
+        gamesResult.rows.forEach(game => {
+          if (!quadrantRecords[game.team_id]) return;
+          const oppRpiRank = rpiRanks[game.opponent_id];
+          const quadrant = getQuadrant(oppRpiRank, game.location);
+          const isWin = game.team_score > game.opponent_score;
+          const qKey = `q${quadrant}_${isWin ? 'wins' : 'losses'}`;
+          quadrantRecords[game.team_id][qKey]++;
+        });
+
+        // Compute QWI and Power Index for each team
+        teams = teams.map(team => {
+          const qr = quadrantRecords[team.team_id];
+          if (!qr) return { ...team, qwi: null, power_index: null };
+
+          const qwi = (qr.q1_wins * 1.0) - (qr.q1_losses * 0.25)
+                    + (qr.q2_wins * 0.6) - (qr.q2_losses * 0.5)
+                    + (qr.q3_wins * 0.3) - (qr.q3_losses * 0.75)
+                    + (qr.q4_wins * 0.1) - (qr.q4_losses * 1.0);
+
+          const adjO = parseFloat(team.adjusted_offensive_rating);
+          const adjD = parseFloat(team.adjusted_defensive_rating);
+          const sos = parseFloat(team.strength_of_schedule);
+          const winPct = parseFloat(team.naia_win_pct);
+
+          let power_index = null;
+          if (!isNaN(adjO) && !isNaN(adjD) && !isNaN(sos) && !isNaN(winPct)) {
+            power_index = (0.35 * adjO)
+                        + (0.35 * (200 - adjD))
+                        + (0.15 * sos * 100)
+                        + (0.075 * winPct * 100)
+                        + (0.075 * qwi);
+            power_index = Math.round(power_index * 100) / 100;
+          }
+
+          return {
+            ...team,
+            qwi: Math.round(qwi * 100) / 100,
+            power_index,
+          };
+        });
+      } catch (qErr) {
+        console.error('Error computing QWI/Power Index:', qErr);
+        // Fall through with teams as-is (no QWI/PI)
+      }
+    }
+
+    res.json(teams);
   } catch (err) {
     console.error('Error fetching teams:', err);
     res.status(500).json({ error: 'Failed to fetch teams' });
@@ -380,7 +480,7 @@ app.get('/api/teams', async (req, res) => {
 // Get available months that have games
 app.get('/api/months', async (req, res) => {
   try {
-    const { league = 'mens' } = req.query;
+    const { league = 'mens', season = DEFAULT_SEASON } = req.query;
 
     const result = await pool.query(`
       SELECT DISTINCT
@@ -389,9 +489,10 @@ app.get('/api/months', async (req, res) => {
       FROM games g
       JOIN teams t ON g.team_id = t.team_id
       WHERE t.league = $1
+        AND g.season = $2
         AND g.is_naia_game = true
       ORDER BY year, month
-    `, [league]);
+    `, [league, season]);
 
     const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
                         'July', 'August', 'September', 'October', 'November', 'December'];
@@ -408,14 +509,27 @@ app.get('/api/months', async (req, res) => {
   }
 });
 
+// Get available seasons
+app.get('/api/seasons', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT DISTINCT season FROM teams ORDER BY season DESC'
+    );
+    res.json(result.rows.map(r => r.season));
+  } catch (err) {
+    console.error('Error fetching seasons:', err);
+    res.status(500).json({ error: 'Failed to fetch seasons' });
+  }
+});
+
 // Get list of conferences
 app.get('/api/conferences', async (req, res) => {
   try {
-    const { league = 'mens' } = req.query;
+    const { league = 'mens', season = DEFAULT_SEASON } = req.query;
 
     const result = await pool.query(
-      'SELECT DISTINCT conference FROM teams WHERE league = $1 AND conference IS NOT NULL ORDER BY conference',
-      [league]
+      'SELECT DISTINCT conference FROM teams WHERE league = $1 AND season = $2 AND conference IS NOT NULL ORDER BY conference',
+      [league, season]
     );
 
     res.json(result.rows.map(r => r.conference));
@@ -429,10 +543,11 @@ app.get('/api/conferences', async (req, res) => {
 app.get('/api/teams/:teamId', async (req, res) => {
   try {
     const { teamId } = req.params;
+    const { season = DEFAULT_SEASON } = req.query;
 
     const teamResult = await pool.query(
-      'SELECT * FROM teams WHERE team_id = $1',
-      [teamId]
+      'SELECT * FROM teams WHERE team_id = $1 AND season = $2',
+      [teamId, season]
     );
 
     if (teamResult.rows.length === 0) {
@@ -441,10 +556,10 @@ app.get('/api/teams/:teamId', async (req, res) => {
 
     const ratingsResult = await pool.query(
       `SELECT * FROM team_ratings
-       WHERE team_id = $1
+       WHERE team_id = $1 AND season = $2
        ORDER BY date_calculated DESC
        LIMIT 1`,
-      [teamId]
+      [teamId, season]
     );
 
     const gamesResult = await pool.query(
@@ -452,10 +567,10 @@ app.get('/api/teams/:teamId', async (req, res) => {
               opp.name as opponent_name,
               opp.logo_url as opponent_logo
        FROM games g
-       LEFT JOIN teams opp ON g.opponent_id = opp.team_id
-       WHERE g.team_id = $1
+       LEFT JOIN teams opp ON g.opponent_id = opp.team_id AND opp.season = $2
+       WHERE g.team_id = $1 AND g.season = $2
        ORDER BY g.game_date DESC`,
-      [teamId]
+      [teamId, season]
     );
 
     res.json({
@@ -473,6 +588,7 @@ app.get('/api/teams/:teamId', async (req, res) => {
 app.get('/api/teams/:teamId/splits', async (req, res) => {
   try {
     const { teamId } = req.params;
+    const { season = DEFAULT_SEASON } = req.query;
 
     // Helper to calculate stats for a set of games
     const calculateSplitStats = (games) => {
@@ -574,9 +690,9 @@ app.get('/api/teams/:teamId/splits', async (req, res) => {
     const gamesResult = await pool.query(
       `SELECT g.*
        FROM games g
-       WHERE g.team_id = $1 AND g.is_naia_game = true AND g.is_completed = true
+       WHERE g.team_id = $1 AND g.season = $2 AND g.is_naia_game = true AND g.is_completed = true
        ORDER BY g.game_date DESC`,
-      [teamId]
+      [teamId, season]
     );
 
     const allGames = gamesResult.rows;
@@ -585,7 +701,7 @@ app.get('/api/teams/:teamId/splits', async (req, res) => {
     }
 
     // Get team info for conference record
-    const teamResult = await pool.query('SELECT conference FROM teams WHERE team_id = $1', [teamId]);
+    const teamResult = await pool.query('SELECT conference FROM teams WHERE team_id = $1 AND season = $2', [teamId, season]);
     const teamConference = teamResult.rows[0]?.conference;
 
     // Calculate different splits
@@ -641,6 +757,25 @@ app.get('/api/teams/:teamId/splits', async (req, res) => {
 app.get('/api/teams/:teamId/schedule', async (req, res) => {
   try {
     const { teamId } = req.params;
+    const { season = DEFAULT_SEASON } = req.query;
+
+    // First get the league for this team to find correct RPI rankings
+    const teamInfo = await pool.query(
+      `SELECT league FROM teams WHERE team_id = $1 AND season = $2`, [teamId, season]
+    );
+    const teamLeague = teamInfo.rows[0]?.league || 'mens';
+
+    // Get RPI rankings for all teams in this league
+    const rpiResult = await pool.query(
+      `SELECT t.team_id, tr.rpi
+       FROM teams t
+       JOIN team_ratings tr ON t.team_id = tr.team_id AND tr.season = $2
+       WHERE t.league = $1 AND t.season = $2 AND tr.rpi IS NOT NULL
+       ORDER BY tr.rpi DESC`,
+      [teamLeague, season]
+    );
+    const rpiRanks = {};
+    rpiResult.rows.forEach((r, i) => { rpiRanks[r.team_id] = i + 1; });
 
     const gamesResult = await pool.query(
       `SELECT
@@ -655,13 +790,15 @@ app.get('/api/teams/:teamId/schedule', async (req, res) => {
         g.is_naia_game,
         g.is_exhibition,
         g.is_completed,
+        g.fga, g.oreb, g.turnovers, g.fta,
+        g.opp_fga, g.opp_oreb, g.opp_turnovers, g.opp_fta,
         t.name as opponent_team_name,
         t.logo_url as opponent_logo_url
        FROM games g
-       LEFT JOIN teams t ON g.opponent_id = t.team_id
-       WHERE g.team_id = $1
+       LEFT JOIN teams t ON g.opponent_id = t.team_id AND t.season = $2
+       WHERE g.team_id = $1 AND g.season = $2
        ORDER BY g.game_date ASC`,
-      [teamId]
+      [teamId, season]
     );
 
     const games = gamesResult.rows.map(g => {
@@ -677,6 +814,24 @@ app.get('/api/teams/:teamId/schedule', async (req, res) => {
         gameType = 'Non-Conference';
       }
 
+      // Calculate per-game net rating for completed games
+      let netRating = null;
+      if (g.is_completed && g.fga && g.opp_fga) {
+        const poss = g.fga - g.oreb + g.turnovers + 0.475 * g.fta;
+        const oppPoss = g.opp_fga - g.opp_oreb + g.opp_turnovers + 0.475 * g.opp_fta;
+        if (poss > 0 && oppPoss > 0) {
+          const ortg = (g.team_score * 100.0) / poss;
+          const drtg = (g.opponent_score * 100.0) / oppPoss;
+          netRating = Math.round((ortg - drtg) * 10) / 10;
+        }
+      }
+
+      // Determine opponent quadrant
+      const oppRpiRank = g.opponent_id ? rpiRanks[g.opponent_id] || null : null;
+      const quadrant = (g.is_naia_game && !g.is_exhibition && oppRpiRank)
+        ? getQuadrant(oppRpiRank, g.location)
+        : null;
+
       return {
         game_id: g.game_id,
         date: g.game_date,
@@ -691,7 +846,10 @@ app.get('/api/teams/:teamId/schedule', async (req, res) => {
         is_exhibition: g.is_exhibition,
         is_completed: g.is_completed,
         game_type: gameType,
-        result: g.is_completed ? (g.team_score > g.opponent_score ? 'W' : 'L') : null
+        result: g.is_completed ? (g.team_score > g.opponent_score ? 'W' : 'L') : null,
+        quadrant,
+        opponent_rpi_rank: oppRpiRank,
+        net_rating: netRating
       };
     });
 
@@ -765,7 +923,7 @@ function getQuadrant(oppRpiRank, location) {
 // Get bracketcast data with quadrant records and seed projections
 app.get('/api/bracketcast', async (req, res) => {
   try {
-    const { league = 'mens' } = req.query;
+    const { league = 'mens', season = DEFAULT_SEASON } = req.query;
 
     // Step 1: Get all teams with their RPI and create RPI rankings
     const teamsResult = await pool.query(`
@@ -788,27 +946,30 @@ app.get('/api/bracketcast', async (req, res) => {
         tr.adjusted_net_rating as net_efficiency
       FROM teams t
       LEFT JOIN team_ratings tr ON t.team_id = tr.team_id
-        AND tr.date_calculated = (SELECT MAX(date_calculated) FROM team_ratings)
+        AND tr.season = $2
+        AND tr.date_calculated = (SELECT MAX(date_calculated) FROM team_ratings WHERE season = $2)
       WHERE t.league = $1
+        AND t.season = $2
         AND t.is_excluded = FALSE
       ORDER BY tr.rpi DESC NULLS LAST
-    `, [league]);
+    `, [league, season]);
 
     const teams = teamsResult.rows;
 
     // Step 1b: Get total record (all games including non-NAIA, but only completed and non-exhibition)
     const totalRecordResult = await pool.query(`
-      SELECT 
+      SELECT
         g.team_id,
         SUM(CASE WHEN g.team_score > g.opponent_score THEN 1 ELSE 0 END) as total_wins,
         SUM(CASE WHEN g.team_score < g.opponent_score THEN 1 ELSE 0 END) as total_losses
       FROM games g
       JOIN teams t ON g.team_id = t.team_id
       WHERE t.league = $1
+        AND g.season = $2
         AND g.is_completed = TRUE
         AND g.is_exhibition = FALSE
       GROUP BY g.team_id
-    `, [league]);
+    `, [league, season]);
 
     const totalRecords = {};
     totalRecordResult.rows.forEach(row => {
@@ -836,9 +997,10 @@ app.get('/api/bracketcast', async (req, res) => {
       FROM games g
       JOIN teams t ON g.team_id = t.team_id
       WHERE t.league = $1
+        AND g.season = $2
         AND g.is_naia_game = TRUE
         AND g.is_completed = TRUE
-    `, [league]);
+    `, [league, season]);
 
     // Step 3: Calculate quadrant records for each team
     const quadrantRecords = {};
@@ -1100,11 +1262,13 @@ app.get('/api/health', (req, res) => {
 // Get last data update timestamp
 app.get('/api/last-updated', async (req, res) => {
   try {
+    const { season = DEFAULT_SEASON } = req.query;
     // Get the most recent updated_at from games table (when game data was last imported)
     const result = await pool.query(`
       SELECT MAX(updated_at) as last_update
       FROM games
-    `);
+      WHERE season = $1
+    `, [season]);
 
     res.json({
       lastUpdated: result.rows[0].last_update,

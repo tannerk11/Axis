@@ -2,7 +2,7 @@ import './Header.css';
 import logoSrc from '../assets/logo.svg';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 
-function Header({ league, onLeagueChange, activePage, onPageChange }) {
+function Header({ league, onLeagueChange, activePage, onPageChange, season, seasons, onSeasonChange }) {
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -33,6 +33,18 @@ function Header({ league, onLeagueChange, activePage, onPageChange }) {
         </nav>
 
         <div className="header-right">
+          {seasons.length > 1 && (
+            <div className="season-selector">
+              <select
+                value={season}
+                onChange={(e) => onSeasonChange(e.target.value)}
+              >
+                {seasons.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <button
             className="theme-toggle"
             onClick={toggleTheme}
