@@ -22,3 +22,18 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://naia-analytics-api.onrender.com
+
+  # Cron Job: Daily data refresh at 2am PST (10:00 UTC)
+  - type: cron
+    name: naia-data-refresh
+    env: node
+    schedule: "0 10 * * *"
+    buildCommand: npm install
+    startCommand: node refresh-data.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: naia-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production

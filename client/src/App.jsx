@@ -5,6 +5,7 @@ import StatGroupTabs from './components/StatGroupTabs';
 import TeamsTable from './components/TeamsTable';
 import TeamModal from './components/TeamModal';
 import Bracketcast from './components/Bracketcast';
+import Insights from './components/Insights';
 import './App.css';
 
 // In production, API is served from same origin (empty string)
@@ -212,9 +213,17 @@ function App() {
             onTeamClick={setSelectedTeam}
           />
         </main>
-      ) : (
+      ) : currentPage === 'bracketcast' ? (
         <Bracketcast league={league} season={season} onTeamClick={setSelectedTeam} />
-      )}
+      ) : currentPage === 'insights' ? (
+        <Insights
+          teams={teams}
+          league={league}
+          season={season}
+          loading={loading}
+          onTeamClick={setSelectedTeam}
+        />
+      ) : null}
 
       {selectedTeam && (
         <TeamModal team={selectedTeam} season={season} onClose={() => setSelectedTeam(null)} />

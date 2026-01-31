@@ -15,6 +15,7 @@
     "setup-db": "node setup-database.js",
     "migrate": "node migrate-add-season.js",
     "refresh": "npm run scrape && npm run import && npm run conferences && npm run analytics",
+    "refresh:cron": "node refresh-data.js",
     "scrape:2024": "node scrape-team-urls.js --season 2024-25",
     "import:2024": "node import-data.js --season 2024-25",
     "conferences:2024": "node scrape-conferences.js --season 2024-25",

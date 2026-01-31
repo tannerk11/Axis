@@ -325,6 +325,10 @@ async function calculateDynamicStats(pool, filters) {
       -- Turnovers
       ROUND(gs.turnover_pct::numeric, 3) as turnover_pct,
       ROUND(gs.turnover_pct_opp::numeric, 3) as turnover_pct_opp,
+      -- Pace (possessions per game)
+      ROUND(CASE WHEN gs.games_played > 0
+        THEN (gs.total_fga - gs.total_oreb + gs.total_to + 0.475 * gs.total_fta)::float / gs.games_played
+        ELSE 0 END::numeric, 1) as pace,
       -- Rebounding
       ROUND(gs.oreb_pct::numeric, 3) as oreb_pct,
       ROUND(gs.dreb_pct::numeric, 3) as dreb_pct,
@@ -668,6 +672,7 @@ app.get('/api/teams/:teamId/splits', async (req, res) => {
         oreb_pct_opp: (totals.oppOreb + totals.dreb) > 0 ? (totals.oppOreb / (totals.oppOreb + totals.dreb)).toFixed(3) : null,
         turnover_pct: poss > 0 ? (totals.to / poss).toFixed(3) : null,
         turnover_pct_opp: oppPoss > 0 ? (totals.oppTo / oppPoss).toFixed(3) : null,
+        pace: gamesPlayed > 0 ? (poss / gamesPlayed).toFixed(1) : null,
         ast_per_game: (totals.ast / gamesPlayed).toFixed(1),
         to_per_game: (totals.to / gamesPlayed).toFixed(1),
         reb_per_game: (totals.treb / gamesPlayed).toFixed(1),

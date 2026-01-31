@@ -1,0 +1,60 @@
+.insights-page {
+  padding-bottom: 24px;
+}
+
+.insights-page .page-header {
+  padding: 24px 24px 0;
+}
+
+.insights-page .page-subtitle {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin: 4px 0 0;
+}
+
+.insight-card {
+  margin: 16px 24px;
+  padding: 24px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+}
+
+.insight-card-header {
+  margin-bottom: 16px;
+}
+
+.insight-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 4px;
+}
+
+.insight-description {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin: 0;
+}
+
+.loading {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .insights-page .page-header {
+    padding: 16px 12px 0;
+  }
+
+  .insight-card {
+    margin: 12px;
+    padding: 16px;
+  }
+
+  .insight-title {
+    font-size: 16px;
+  }
+}

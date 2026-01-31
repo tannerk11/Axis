@@ -54,6 +54,9 @@ async function migrate() {
       ['oreb_pct_opp', 'DECIMAL(5,2)'],
       ['dreb_pct_opp', 'DECIMAL(5,2)'],
       
+      // Pace
+      ['pace', 'DECIMAL(5,1)'],
+
       // Attempt rates
       ['ft_rate', 'DECIMAL(5,2)'],
       ['three_pt_rate', 'DECIMAL(5,2)'],

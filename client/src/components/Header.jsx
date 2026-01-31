@@ -92,6 +92,13 @@ function Header({ league, onLeagueChange, activePage, onPageChange, season, seas
         >
           Bracketcast
         </a>
+        <a
+          href="#"
+          className={`secondary-nav-link ${activePage === 'insights' ? 'active' : ''}`}
+          onClick={(e) => { e.preventDefault(); onPageChange('insights'); }}
+        >
+          Insights
+        </a>
       </nav>
     </div>
   );

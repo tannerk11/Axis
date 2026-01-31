@@ -1,0 +1,39 @@
+.dna-chart-container {
+  width: 100%;
+  height: 550px;
+}
+
+.dna-tooltip {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  pointer-events: none;
+}
+
+.dna-tooltip .tooltip-team {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+
+.dna-tooltip .tooltip-stat {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dna-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+@media (max-width: 600px) {
+  .dna-chart-container {
+    height: 350px;
+  }
+}

@@ -68,6 +68,7 @@ const TOOLTIPS = {
   blk_per_game: 'Blocks Per Game',
 
   // Playmaking
+  pace: 'Pace - Possessions per game. Measures game tempo.',
   ast_per_game: 'Assists Per Game',
   to_per_game: 'Turnovers Per Game. Lower is better.',
   pts_off_to_per_game: 'Points Off Turnovers Per Game - Points scored from opponent turnovers',
@@ -134,6 +135,7 @@ const STAT_GROUPS = {
     columns: [
       { key: 'games_played', label: 'GP', format: 'int' },
       { key: 'record', label: 'Record', format: 'record', sortKey: 'wins' },
+      { key: 'pace', label: 'Pace', format: 'rating' },
       { key: 'ast_per_game', label: 'APG', format: 'rating' },
       { key: 'to_per_game', label: 'TOPG', format: 'rating', lowerIsBetter: true },
       { key: 'turnover_pct', label: 'TO%', format: 'pct1', lowerIsBetter: true },

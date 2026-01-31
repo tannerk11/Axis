@@ -349,6 +349,7 @@ function calculateBasicMetrics(totals) {
     // Possessions & Efficiency
     possessions,
     possessionsOpp,
+    pace: possessions, // Pace = possessions per game (already per-game)
     ortg,
     drtg,
     netRtg,
@@ -740,6 +741,7 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
       fg_pct_opp, fg3_pct_opp, efg_pct_opp,
       turnover_pct, turnover_pct_opp,
       oreb_pct, dreb_pct, oreb_pct_opp, dreb_pct_opp,
+      pace,
       ft_rate, three_pt_rate,
       rpi, naia_wins, naia_losses, naia_win_pct,
       strength_of_schedule, opponent_win_pct, opponent_opponent_win_pct,
@@ -748,7 +750,8 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
       $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
       $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
-      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
+      $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
+      $41
     )
     ON CONFLICT (team_id, date_calculated, season) DO UPDATE SET
       games_played = EXCLUDED.games_played,
@@ -776,6 +779,7 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
       dreb_pct = EXCLUDED.dreb_pct,
       oreb_pct_opp = EXCLUDED.oreb_pct_opp,
       dreb_pct_opp = EXCLUDED.dreb_pct_opp,
+      pace = EXCLUDED.pace,
       ft_rate = EXCLUDED.ft_rate,
       three_pt_rate = EXCLUDED.three_pt_rate,
       rpi = EXCLUDED.rpi,
@@ -817,18 +821,19 @@ async function saveToDatabase(client, teamData, rpiData, adjustedData) {
     metrics.drebPct,                           // $26
     metrics.orebPctOpp,                        // $27
     metrics.drebPctOpp,                        // $28
-    metrics.ftRate,                            // $29
-    metrics.threePtRate,                       // $30
-    rpi.rpi || 0,                              // $31
-    rpi.naiaWins || 0,                         // $32
-    rpi.naiaLosses || 0,                       // $33
-    rpi.naiaWinPct || 0,                       // $34
-    rpi.sos || 0,                              // $35
-    rpi.owp || 0,                              // $36
-    rpi.oowp || 0,                             // $37
-    adjusted.osos || 0,                        // $38
-    adjusted.dsos || 0,                        // $39
-    adjusted.nsos || 0                         // $40
+    metrics.pace,                              // $29
+    metrics.ftRate,                            // $30
+    metrics.threePtRate,                       // $31
+    rpi.rpi || 0,                              // $32
+    rpi.naiaWins || 0,                         // $33
+    rpi.naiaLosses || 0,                       // $34
+    rpi.naiaWinPct || 0,                       // $35
+    rpi.sos || 0,                              // $36
+    rpi.owp || 0,                              // $37
+    rpi.oowp || 0,                             // $38
+    adjusted.osos || 0,                        // $39
+    adjusted.dsos || 0,                        // $40
+    adjusted.nsos || 0                         // $41
   ]);
 }
 
