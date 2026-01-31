@@ -34,6 +34,10 @@ function FilterBar({ conferences, months, filters, onFilterChange, onReset }) {
           onChange={(e) => onFilterChange('seasonSegment', e.target.value)}
         >
           <option value="all">Entire Season</option>
+          <option value="regular">Regular Season</option>
+          <option value="postseason">All Postseason</option>
+          <option value="conftournament">Conference Tournament</option>
+          <option value="nationaltournament">National Tournament</option>
           <optgroup label="Last N Games">
             <option value="last10">Last 10 Games</option>
             <option value="last5">Last 5 Games</option>

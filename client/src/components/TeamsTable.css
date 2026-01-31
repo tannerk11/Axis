@@ -329,3 +329,10 @@
     font-size: 13px;
   }
 }
+
+/* Conference Champion Badge */
+.champion-badge {
+  margin-left: 6px;
+  font-size: 14px;
+  cursor: help;
+}

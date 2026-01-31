@@ -33,12 +33,91 @@ if (process.env.NODE_ENV === 'production') {
 const DEFAULT_SEASON = '2025-26';
 
 /**
+ * Get conference champions for a given league and season
+ * A conference champion is the team that won the latest conference tournament game
+ * @param {Pool} pool - PostgreSQL connection pool
+ * @param {string} league - 'mens' or 'womens'
+ * @param {string} season - Season identifier (e.g., '2025-26')
+ * @returns {Promise<Set<string>>} - Set of team_ids that are conference champions
+ */
+async function getConferenceChampions(pool, league, season) {
+  try {
+    // Find the conference championship by identifying the main conference tournament.
+    // The main tournament is identified by finding the date with the most teams playing,
+    // then including all dates within a 10-day window that have continuous activity
+    // (gaps of 5+ days indicate a separate tournament like a play-in).
+    const result = await pool.query(`
+      WITH postseason_games AS (
+        SELECT t.team_id, t.name, t.conference, g.game_date, g.game_id,
+               g.team_score, g.opponent_score
+        FROM games g
+        JOIN teams t ON g.team_id = t.team_id AND g.season = t.season
+        WHERE t.league = $1 
+          AND g.season = $2
+          AND g.is_postseason = true 
+          AND g.is_national_tournament = false
+          AND g.is_completed = true
+      ),
+      conf_game_dates AS (
+        -- Count how many teams from each conference played on each date
+        SELECT conference, game_date, COUNT(DISTINCT team_id) as teams_playing
+        FROM postseason_games
+        GROUP BY conference, game_date
+      ),
+      tournament_peak AS (
+        -- Find the date with the MOST teams playing (start of main tournament bracket)
+        SELECT conference, game_date as peak_date, teams_playing,
+               ROW_NUMBER() OVER (PARTITION BY conference ORDER BY teams_playing DESC, game_date ASC) as rn
+        FROM conf_game_dates
+      ),
+      main_tournament_dates AS (
+        -- Get dates within 10 days of peak
+        SELECT cd.conference, cd.game_date, cd.teams_playing,
+               LAG(cd.game_date) OVER (PARTITION BY cd.conference ORDER BY cd.game_date) as prev_date
+        FROM conf_game_dates cd
+        JOIN tournament_peak tp ON cd.conference = tp.conference AND tp.rn = 1
+        WHERE cd.game_date >= tp.peak_date - INTERVAL '1 day'
+          AND cd.game_date <= tp.peak_date + INTERVAL '10 days'
+      ),
+      continuous_tournament AS (
+        -- Filter to only include dates that are within 4 days of the previous date (continuous tournament)
+        SELECT conference, game_date, teams_playing
+        FROM main_tournament_dates
+        WHERE prev_date IS NULL OR (game_date - prev_date) <= 4
+      ),
+      championship_dates AS (
+        -- Find the last date with 2+ teams within the continuous main tournament
+        SELECT conference, MAX(game_date) as champ_date
+        FROM continuous_tournament
+        WHERE teams_playing >= 2
+        GROUP BY conference
+      ),
+      championship_winners AS (
+        -- Find the team that won on the championship date for each conference
+        SELECT pg.team_id, pg.conference,
+               ROW_NUMBER() OVER (PARTITION BY pg.conference ORDER BY pg.game_id DESC) as rn
+        FROM postseason_games pg
+        JOIN championship_dates cd ON pg.conference = cd.conference AND pg.game_date = cd.champ_date
+        WHERE pg.team_score > pg.opponent_score
+      )
+      SELECT team_id FROM championship_winners WHERE rn = 1
+    `, [league, season]);
+    
+    return new Set(result.rows.map(r => r.team_id));
+  } catch (error) {
+    console.error('Error getting conference champions:', error);
+    return new Set();
+  }
+}
+
+/**
  * Calculate team stats dynamically from games table based on filters
  * @param {Pool} pool - PostgreSQL connection pool
  * @param {Object} filters - Filter options
  * @param {string} filters.league - 'mens' or 'womens'
  * @param {string} filters.conference - Conference name or 'All Conferences'
  * @param {string} filters.gameType - 'all' for all NAIA games, 'conference' for conference games only
+ * @param {string} filters.seasonType - 'all', 'regular', or 'postseason'
  * @param {string} filters.seasonSegment - 'all', 'last10', 'last5', 'last3', or 'YYYY-MM' for specific month
  * @param {string} filters.season - Season identifier (e.g., '2025-26')
  * @returns {Promise<QueryResult>} - PostgreSQL query result
@@ -48,6 +127,7 @@ async function calculateDynamicStats(pool, filters) {
     league = 'mens',
     conference,
     gameType = 'all',
+    seasonType = 'all',
     seasonSegment = 'all',
     season = DEFAULT_SEASON,
   } = filters;
@@ -56,6 +136,18 @@ async function calculateDynamicStats(pool, filters) {
   const gameFilters = ['g.is_naia_game = true', 'g.is_completed = true', `g.season = '${season.replace(/'/g, "''")}'`];
   if (gameType === 'conference') {
     gameFilters.push('g.is_conference = true');
+  }
+  
+  // Season type filter (regular season vs postseason variants)
+  if (seasonType === 'regular') {
+    gameFilters.push('g.is_postseason = false');
+  } else if (seasonType === 'postseason') {
+    gameFilters.push('g.is_postseason = true');
+  } else if (seasonType === 'conftournament') {
+    gameFilters.push('g.is_postseason = true');
+    gameFilters.push('g.is_national_tournament = false');
+  } else if (seasonType === 'nationaltournament') {
+    gameFilters.push('g.is_national_tournament = true');
   }
 
   // Handle month filter (format: YYYY-MM)
@@ -241,7 +333,7 @@ async function calculateDynamicStats(pool, filters) {
   }
 
   // Determine if we should use pre-calculated adjusted ratings
-  const usePreCalculated = gameType === 'all' && seasonSegment === 'all';
+  const usePreCalculated = gameType === 'all' && seasonSegment === 'all' && seasonType === 'all';
 
   const query = `
     WITH ${gamesCTE}
@@ -377,15 +469,51 @@ app.get('/api/teams', async (req, res) => {
       league = 'mens',
       conference,
       gameType = 'all',
+      seasonType = 'all',
       seasonSegment = 'all',
       season = DEFAULT_SEASON,
     } = req.query;
 
-    const result = await calculateDynamicStats(pool, { league, conference, gameType, seasonSegment, season });
+    const result = await calculateDynamicStats(pool, { league, conference, gameType, seasonType, seasonSegment, season });
     let teams = result.rows;
 
+    // Get total record (all games including non-NAIA, but only completed and non-exhibition)
+    // Exclude national tournament games since this matches bracketcast behavior
+    const totalRecordResult = await pool.query(`
+      SELECT
+        g.team_id,
+        SUM(CASE WHEN g.team_score > g.opponent_score THEN 1 ELSE 0 END) as total_wins,
+        SUM(CASE WHEN g.team_score < g.opponent_score THEN 1 ELSE 0 END) as total_losses
+      FROM games g
+      JOIN teams t ON g.team_id = t.team_id
+      WHERE t.league = $1
+        AND g.season = $2
+        AND g.is_completed = TRUE
+        AND g.is_exhibition = FALSE
+        AND g.is_national_tournament = FALSE
+      GROUP BY g.team_id
+    `, [league, season]);
+
+    const totalRecords = {};
+    totalRecordResult.rows.forEach(row => {
+      totalRecords[row.team_id] = {
+        total_wins: parseInt(row.total_wins) || 0,
+        total_losses: parseInt(row.total_losses) || 0,
+      };
+    });
+
+    // Add total record to teams
+    teams = teams.map(team => {
+      const tr = totalRecords[team.team_id] || { total_wins: 0, total_losses: 0 };
+      return {
+        ...team,
+        total_wins: tr.total_wins,
+        total_losses: tr.total_losses,
+      };
+    });
+
     // Add QWI and Power Index when viewing full-season unfiltered data
-    const usePreCalculated = gameType === 'all' && seasonSegment === 'all';
+    const usePreCalculated = gameType === 'all' && seasonSegment === 'all' && seasonType === 'all';
     if (usePreCalculated) {
       try {
         // Get RPI rankings for quadrant assignment
@@ -472,6 +600,18 @@ app.get('/api/teams', async (req, res) => {
         console.error('Error computing QWI/Power Index:', qErr);
         // Fall through with teams as-is (no QWI/PI)
       }
+    }
+
+    // Add conference champion flag
+    try {
+      const conferenceChampions = await getConferenceChampions(pool, league, season);
+      teams = teams.map(team => ({
+        ...team,
+        is_conference_champion: conferenceChampions.has(team.team_id),
+      }));
+    } catch (champErr) {
+      console.error('Error getting conference champions:', champErr);
+      // Continue without champion flags
     }
 
     res.json(teams);
@@ -794,6 +934,8 @@ app.get('/api/teams/:teamId/schedule', async (req, res) => {
         g.is_conference,
         g.is_naia_game,
         g.is_exhibition,
+        g.is_postseason,
+        g.is_national_tournament,
         g.is_completed,
         g.fga, g.oreb, g.turnovers, g.fta,
         g.opp_fga, g.opp_oreb, g.opp_turnovers, g.opp_fta,
@@ -808,9 +950,14 @@ app.get('/api/teams/:teamId/schedule', async (req, res) => {
 
     const games = gamesResult.rows.map(g => {
       // Determine game type for display
+      // Priority: Exhibition > National Tournament > Conference Tournament > Non-NAIA > Conference > Non-Conference
       let gameType = 'NAIA';
       if (g.is_exhibition) {
         gameType = 'Exhibition';
+      } else if (g.is_national_tournament) {
+        gameType = 'National Tournament';
+      } else if (g.is_postseason) {
+        gameType = 'Conference Tournament';
       } else if (!g.is_naia_game) {
         gameType = 'Non-NAIA';
       } else if (g.is_conference) {
@@ -961,7 +1108,11 @@ app.get('/api/bracketcast', async (req, res) => {
 
     const teams = teamsResult.rows;
 
+    // Step 1a: Get conference champions
+    const conferenceChampions = await getConferenceChampions(pool, league, season);
+
     // Step 1b: Get total record (all games including non-NAIA, but only completed and non-exhibition)
+    // Exclude national tournament games since bracketcast is for projecting seeds
     const totalRecordResult = await pool.query(`
       SELECT
         g.team_id,
@@ -973,6 +1124,7 @@ app.get('/api/bracketcast', async (req, res) => {
         AND g.season = $2
         AND g.is_completed = TRUE
         AND g.is_exhibition = FALSE
+        AND g.is_national_tournament = FALSE
       GROUP BY g.team_id
     `, [league, season]);
 
@@ -991,6 +1143,7 @@ app.get('/api/bracketcast', async (req, res) => {
     });
 
     // Step 2: Get all NAIA games for quadrant calculation
+    // Exclude national tournament games since bracketcast is for projecting seeds
     const gamesResult = await pool.query(`
       SELECT
         g.team_id,
@@ -1005,6 +1158,7 @@ app.get('/api/bracketcast', async (req, res) => {
         AND g.season = $2
         AND g.is_naia_game = TRUE
         AND g.is_completed = TRUE
+        AND g.is_national_tournament = FALSE
     `, [league, season]);
 
     // Step 3: Calculate quadrant records for each team
@@ -1055,7 +1209,7 @@ app.get('/api/bracketcast', async (req, res) => {
     });
 
     // Step 5: Build final team data with all fields
-    const bracketcastTeams = teams.map((team, idx) => {
+    let bracketcastTeams = teams.map((team, idx) => {
       const qr = quadrantRecords[team.team_id] || {};
       const cr = conferenceRecords[team.team_id] || {};
       const tr = totalRecords[team.team_id] || { total_wins: 0, total_losses: 0 };
@@ -1105,51 +1259,81 @@ app.get('/api/bracketcast', async (req, res) => {
         owp: team.opponent_win_pct ? parseFloat(team.opponent_win_pct) : null,
         oowp: team.opponent_opponent_win_pct ? parseFloat(team.opponent_opponent_win_pct) : null,
         projected_seed: rpiRank && rpiRank <= 64 ? rpiRank : null,
+        is_conference_champion: conferenceChampions.has(team.team_id),
       };
     });
 
-    // Step 6: Build bracket projection (top 64 teams by RPI)
-    const qualifiedTeams = bracketcastTeams
-      .filter(t => t.rpi_rank && t.rpi_rank <= 64)
-      .sort((a, b) => a.rpi_rank - b.rpi_rank);
+    // Step 6: Calculate PCR (Primary Criteria Ranking) for each team
+    // PCR = average of ranks in: Total Win %, RPI, and QWP
+    const calcQWP = (team) =>
+      (team.q1_wins || 0) * 4 +
+      (team.q2_wins || 0) * 2 +
+      (team.q3_wins || 0) * 1 +
+      (team.q4_wins || 0) * 0.5;
 
-    // Legacy quad structure (for backward compatibility)
-    const bracket = {
-      quad1: qualifiedTeams.slice(0, 16).map((t, i) => ({
-        seed: i + 1,
-        team_id: t.team_id,
-        name: t.name,
-        conference: t.conference,
-        record: `${t.wins}-${t.losses}`,
-        rpi_rank: t.rpi_rank,
-      })),
-      quad2: qualifiedTeams.slice(16, 32).map((t, i) => ({
-        seed: i + 1,
-        team_id: t.team_id,
-        name: t.name,
-        conference: t.conference,
-        record: `${t.wins}-${t.losses}`,
-        rpi_rank: t.rpi_rank,
-      })),
-      quad3: qualifiedTeams.slice(32, 48).map((t, i) => ({
-        seed: i + 1,
-        team_id: t.team_id,
-        name: t.name,
-        conference: t.conference,
-        record: `${t.wins}-${t.losses}`,
-        rpi_rank: t.rpi_rank,
-      })),
-      quad4: qualifiedTeams.slice(48, 64).map((t, i) => ({
-        seed: i + 1,
-        team_id: t.team_id,
-        name: t.name,
-        conference: t.conference,
-        record: `${t.wins}-${t.losses}`,
-        rpi_rank: t.rpi_rank,
-      })),
+    // Add QWP to each team
+    const teamsWithQWP = bracketcastTeams.map(t => ({ ...t, qwp: calcQWP(t) }));
+
+    // Rank by each criteria (descending - higher is better)
+    const rankDesc = (arr, key) => {
+      const sorted = [...arr].sort((a, b) => (b[key] || 0) - (a[key] || 0));
+      const ranks = {};
+      sorted.forEach((t, i) => { ranks[t.team_id] = i + 1; });
+      return ranks;
     };
 
-    // Step 7: Build pod assignments (16 pods of 4 teams each)
+    const winPctRanks = rankDesc(teamsWithQWP, 'total_win_pct');
+    const rpiValueRanks = rankDesc(teamsWithQWP, 'rpi');
+    const qwpRanks = rankDesc(teamsWithQWP, 'qwp');
+
+    // Compute average rank for each team
+    const teamsWithAvg = teamsWithQWP.map(t => ({
+      ...t,
+      pcr_avg: (winPctRanks[t.team_id] + rpiValueRanks[t.team_id] + qwpRanks[t.team_id]) / 3,
+    }));
+
+    // Sort by average rank to assign final PCR position
+    const byAvg = [...teamsWithAvg].sort((a, b) => a.pcr_avg - b.pcr_avg);
+    const pcrMap = {};
+    byAvg.forEach((t, i) => { pcrMap[t.team_id] = i + 1; });
+
+    // Add PCR to bracketcast teams
+    bracketcastTeams = teamsWithAvg.map(t => ({ ...t, pcr: pcrMap[t.team_id] }));
+
+    // Step 6b: Calculate PR (Projected Rank)
+    // PR = PCR, but conference champions are forced to be ranked at least in the top 64
+    // This simulates the automatic qualification for conference tournament winners
+    const championsOutsideTop64 = bracketcastTeams
+      .filter(t => t.is_conference_champion && t.pcr > 64)
+      .sort((a, b) => a.pcr - b.pcr); // Sort by PCR ascending (best first)
+
+    const nonChampionsInTop64 = bracketcastTeams
+      .filter(t => !t.is_conference_champion && t.pcr <= 64)
+      .sort((a, b) => b.pcr - a.pcr); // Sort by PCR descending (worst first, to be bumped)
+
+    // Build PR map - start with PCR values
+    const prMap = {};
+    bracketcastTeams.forEach(t => { prMap[t.team_id] = t.pcr; });
+
+    // For each champion outside top 64, bump out a non-champion from top 64
+    const bumpsNeeded = Math.min(championsOutsideTop64.length, nonChampionsInTop64.length);
+    for (let i = 0; i < bumpsNeeded; i++) {
+      const championIn = championsOutsideTop64[i];
+      const nonChampionOut = nonChampionsInTop64[i];
+      // Swap their PR ranks
+      prMap[championIn.team_id] = nonChampionOut.pcr;
+      prMap[nonChampionOut.team_id] = championIn.pcr;
+    }
+
+    // Add PR to bracketcast teams
+    bracketcastTeams = bracketcastTeams.map(t => ({ ...t, pr: prMap[t.team_id] }));
+
+    // Step 7: Build bracket projection (top 64 teams by PR)
+    const qualifiedTeams = bracketcastTeams
+      .filter(t => t.pr && t.pr <= 64)
+      .sort((a, b) => a.pr - b.pr);
+
+    // Step 8: Build pod assignments (16 pods of 4 teams each)
     // Helper function to calculate distance between two points (Haversine formula)
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
       if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
@@ -1168,6 +1352,64 @@ app.get('/api/bracketcast', async (req, res) => {
     const seed2Teams = qualifiedTeams.slice(16, 32); // #2 seeds
     const seed3Teams = qualifiedTeams.slice(32, 48); // #3 seeds
     const seed4Teams = qualifiedTeams.slice(48, 64); // #4 seeds
+
+    // Function to get potential hosts for a team (closest 4 host sites)
+    const getPotentialHosts = (team, hostTeams) => {
+      // If team is a host (#1 seed), they host themselves
+      const isHost = hostTeams.some(h => h.team_id === team.team_id);
+      if (isHost) {
+        return { isHost: true, potentialHosts: [] };
+      }
+
+      // Calculate distance to each host
+      const hostsWithDistance = hostTeams.map(host => ({
+        team_id: host.team_id,
+        name: host.name,
+        city: host.city,
+        state: host.state,
+        conference: host.conference,
+        rpi_rank: host.rpi_rank,
+        distance: calculateDistance(
+          team.latitude, team.longitude,
+          host.latitude, host.longitude
+        ),
+        hasConferenceConflict: host.conference === team.conference,
+      }));
+
+      // Sort by distance and take closest 4
+      hostsWithDistance.sort((a, b) => a.distance - b.distance);
+      return {
+        isHost: false,
+        potentialHosts: hostsWithDistance.slice(0, 4),
+      };
+    };
+
+    // Build bracket with potential hosts for each team
+    const buildBracketQuad = (teams, hostTeams) => {
+      return teams.map((t, i) => {
+        const hostInfo = getPotentialHosts(t, hostTeams);
+        return {
+          seed: i + 1,
+          team_id: t.team_id,
+          name: t.name,
+          conference: t.conference,
+          city: t.city,
+          state: t.state,
+          record: `${t.wins}-${t.losses}`,
+          rpi_rank: t.rpi_rank,
+          isHost: hostInfo.isHost,
+          potentialHosts: hostInfo.potentialHosts,
+        };
+      });
+    };
+
+    // Legacy quad structure (for backward compatibility) - now with potential hosts
+    const bracket = {
+      quad1: buildBracketQuad(qualifiedTeams.slice(0, 16), seed1Teams),
+      quad2: buildBracketQuad(qualifiedTeams.slice(16, 32), seed1Teams),
+      quad3: buildBracketQuad(qualifiedTeams.slice(32, 48), seed1Teams),
+      quad4: buildBracketQuad(qualifiedTeams.slice(48, 64), seed1Teams),
+    };
 
     // Initialize 16 pods with #1 seeds as hosts
     const pods = seed1Teams.map((host, index) => ({

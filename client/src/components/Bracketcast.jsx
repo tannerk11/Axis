@@ -6,18 +6,20 @@ const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'ht
 
 // Tooltip descriptions for bracketcast columns
 const TOOLTIPS = {
+  rank: 'Rank - Dynamic ranking based on current sort column',
   rpi_rank: 'RPI Rank - Team ranking based on Rating Percentage Index',
   area: 'Geographic Area - East, Midwest, North, South, or West',
   record: 'Total Record - All games including non-NAIA (excludes exhibitions)',
   total_win_pct: 'Total WP - Win percentage from all games (used for overall evaluation)',
   naia_win_pct: 'NAIA WP - Win percentage from NAIA games only (used in RPI formula)',
   rpi: 'RPI - Rating Percentage Index: WP(0.30) + OWP(0.50) + OOWP(0.20)',
-  q1: 'Quadrant 1 Record - Wins/Losses vs top opponents (Home: 1-45, Neutral: 1-55, Away: 1-65)',
+  q1: 'Quadrant 1 Record - Wins/Losses vs top opponents (Home: 1-45, Neutral: 55, Away: 65)',
   q2: 'Quadrant 2 Record - Wins/Losses vs good opponents (Home: 46-90, Neutral: 56-105, Away: 66-120)',
   q3: 'Quadrant 3 Record - Wins/Losses vs average opponents (Home: 91-135, Neutral: 106-150, Away: 121-165)',
   q4: 'Quadrant 4 Record - Wins/Losses vs weaker opponents (Home: 136+, Neutral: 150+, Away: 166+)',
   qwp: 'Quad Win Points - Q1 win = 4pts, Q2 win = 2pts, Q3 win = 1pt, Q4 win = 0.5pts',
   pcr: 'Primary Criteria Ranking - Composite rank from Overall Win %, RPI, and QWP',
+  pr: 'Projected Rank - PCR with conference champions guaranteed top 64',
   net_efficiency: 'Net Efficiency - Offensive Rating minus Defensive Rating',
   sos: 'Strength of Schedule - Average quality of opponents faced',
   sos_rank: 'SOS Rank - Strength of Schedule ranking',
@@ -26,7 +28,7 @@ const TOOLTIPS = {
 };
 
 const COLUMNS = [
-  { key: 'rpi_rank', label: 'Rank', sortKey: 'rpi_rank' },
+  { key: 'rank', label: 'Rank' }, // Dynamic rank based on current sort
   { key: 'team', label: 'Team' },
   { key: 'area', label: 'Area', sortKey: 'area' },
   { key: 'record', label: 'Record', sortKey: 'total_wins' },
@@ -35,8 +37,10 @@ const COLUMNS = [
   { key: 'q3', label: 'Q3', sortKey: 'q3_wins' },
   { key: 'q4', label: 'Q4', sortKey: 'q4_wins' },
   { key: 'qwp', label: 'QWP', sortKey: 'qwp' },
+  { key: 'rpi_rank', label: 'RPI Rank', sortKey: 'rpi_rank' },
   { key: 'rpi', label: 'RPI', sortKey: 'rpi' },
   { key: 'pcr', label: 'PCR', sortKey: 'pcr' },
+  { key: 'pr', label: 'PR', sortKey: 'pr' },
   { key: 'sos_rank', label: 'SOS Rank', sortKey: 'sos_rank' },
   { key: 'sos', label: 'SOS', sortKey: 'sos' },
   { key: 'total_win_pct', label: 'Total WP', sortKey: 'total_win_pct' },
@@ -45,11 +49,17 @@ const COLUMNS = [
   { key: 'oowp', label: 'OOWP', sortKey: 'oowp' },
 ];
 
+// Stats where lower values are better (for determining sort direction)
+const LOWER_IS_BETTER = new Set([
+  'rpi_rank', 'pcr', 'pr', 'sos_rank'
+]);
+
 function Bracketcast({ league, season, onTeamClick }) {
   const [data, setData] = useState({ teams: [], bracket: {}, pods: [] });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('table'); // 'table', 'bracket', or 'pods'
-  const [sort, setSort] = useState({ key: 'rpi_rank', dir: 'asc' });
+  const [sort, setSort] = useState({ key: 'pr', dir: 'asc' });
+  const [expandedTeams, setExpandedTeams] = useState(new Set()); // Track expanded teams in Seed Groups
 
   useEffect(() => {
     const fetchBracketcast = async () => {
@@ -70,13 +80,13 @@ function Bracketcast({ league, season, onTeamClick }) {
 
   const handleSort = (col) => {
     const sortKey = col.sortKey || col.key;
-    if (sortKey === 'team') return; // Don't sort by team name column
+    if (sortKey === 'team' || col.key === 'rank') return; // Don't sort by team name or rank column
 
     if (sort.key === sortKey) {
       setSort({ key: sortKey, dir: sort.dir === 'asc' ? 'desc' : 'asc' });
     } else {
-      // Default to descending for most stats, ascending for rank
-      const defaultDir = (sortKey === 'rpi_rank' || sortKey === 'pcr') ? 'asc' : 'desc';
+      // Default to ascending for "lower is better" stats, descending for others
+      const defaultDir = LOWER_IS_BETTER.has(sortKey) ? 'asc' : 'desc';
       setSort({ key: sortKey, dir: defaultDir });
     }
   };
@@ -159,6 +169,18 @@ function Bracketcast({ league, season, onTeamClick }) {
     return '';
   };
 
+  const toggleTeamExpanded = (teamId) => {
+    setExpandedTeams(prev => {
+      const next = new Set(prev);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <main className="main-content bracketcast-page">
@@ -217,13 +239,13 @@ function Bracketcast({ league, season, onTeamClick }) {
                 </tr>
               </thead>
               <tbody>
-                {sortedTeams.map((team) => (
+                {sortedTeams.map((team, index) => (
                   <tr
                     key={team.team_id}
-                    className={team.projected_seed ? 'in-bracket' : 'bubble'}
+                    className={team.pr && team.pr <= 64 ? 'in-bracket' : 'bubble'}
                   >
-                    <td className="col-rpi_rank">
-                      {team.rpi_rank || '-'}
+                    <td className="col-rank">
+                      {index + 1}
                     </td>
                     <td className="col-team">
                       <div className="team-info">
@@ -234,6 +256,7 @@ function Bracketcast({ league, season, onTeamClick }) {
                             onClick={() => onTeamClick && onTeamClick(team)}
                           >
                             {team.name}
+                            {team.is_conference_champion && <span className="champion-badge" title="Conference Champion (Auto-Bid)">🏆</span>}
                           </span>
                           <span className="team-conference">{team.conference || ''}</span>
                         </div>
@@ -262,11 +285,17 @@ function Bracketcast({ league, season, onTeamClick }) {
                     <td className="col-qwp">
                       {team.qwp % 1 === 0 ? team.qwp.toFixed(0) : team.qwp.toFixed(1)}
                     </td>
+                    <td className="col-rpi_rank">
+                      {team.rpi_rank || '-'}
+                    </td>
                     <td className="col-rpi">
                       {team.rpi ? team.rpi.toFixed(3) : '-'}
                     </td>
                     <td className="col-pcr">
                       {team.pcr || '-'}
+                    </td>
+                    <td className="col-pr">
+                      {team.pr || '-'}
                     </td>
                     <td className="col-sos_rank">
                       {team.sos_rank || '-'}
@@ -349,29 +378,76 @@ function Bracketcast({ league, season, onTeamClick }) {
       ) : (
         <div className="bracket-projection">
           <p className="bracket-description">
-            Teams grouped by seed tier. #1 seeds (1-16 RPI), #2 seeds (17-32 RPI), etc.
+            Teams grouped by seed tier. Click a team to see their 4 closest potential host sites.
           </p>
           <div className="bracket-grid">
             {['quad1', 'quad2', 'quad3', 'quad4'].map((quadKey, quadIdx) => (
               <div key={quadKey} className="bracket-quad">
                 <h3 className="quad-header">#{quadIdx + 1} Seeds</h3>
                 <div className="quad-teams">
-                  {data.bracket[quadKey]?.map((team) => (
-                    <div key={team.team_id} className="bracket-team">
-                      <span className="seed-number">{team.rpi_rank}</span>
-                      <div className="bracket-team-info">
-                        <span className="bracket-team-name">{team.name}</span>
-                        <span className="bracket-team-record">{team.record}</span>
+                  {data.bracket[quadKey]?.map((team, teamIdx) => (
+                    <div key={team.team_id} className="bracket-team-wrapper">
+                      <div 
+                        className={`bracket-team ${team.isHost ? 'is-host' : 'expandable'} ${expandedTeams.has(team.team_id) ? 'expanded' : ''}`}
+                        onClick={() => !team.isHost && toggleTeamExpanded(team.team_id)}
+                      >
+                        <span className="seed-number">{quadIdx * 16 + teamIdx + 1}</span>
+                        <div className="bracket-team-info">
+                          <span className="bracket-team-name">{team.name}</span>
+                          <span className="bracket-team-meta">
+                            {team.city && team.state ? `${team.city}, ${team.state}` : team.conference}
+                          </span>
+                        </div>
+                        <div className="bracket-team-right">
+                          <span className="bracket-team-record">{team.record}</span>
+                          {team.isHost ? (
+                            <span className="host-badge">HOST</span>
+                          ) : (
+                            <span className={`expand-icon ${expandedTeams.has(team.team_id) ? 'expanded' : ''}`}>
+                              ▶
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      {/* Expandable potential hosts section */}
+                      {expandedTeams.has(team.team_id) && team.potentialHosts && (
+                        <div className="potential-hosts">
+                          <div className="potential-hosts-header">Most Likely Host Sites:</div>
+                          {team.potentialHosts.map((host, idx) => (
+                            <div 
+                              key={host.team_id} 
+                              className={`potential-host ${host.hasConferenceConflict ? 'conf-conflict' : ''}`}
+                            >
+                              <span className="potential-host-rank">{idx + 1}.</span>
+                              <div className="potential-host-info">
+                                <span className="potential-host-name">{host.name}</span>
+                                <span className="potential-host-location">
+                                  {host.city}, {host.state}
+                                </span>
+                              </div>
+                              <span className="potential-host-distance">
+                                {host.distance === Infinity ? '?' : `${host.distance.toLocaleString()} mi`}
+                              </span>
+                            </div>
+                          ))}
+                          {team.potentialHosts.some(h => h.hasConferenceConflict) && (
+                            <div className="conf-conflict-note">
+                              * Strikethrough = same conference (unlikely)
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                   {/* Fill empty slots if fewer than 16 teams */}
                   {data.bracket[quadKey]?.length < 16 &&
                     Array.from({ length: 16 - (data.bracket[quadKey]?.length || 0) }).map((_, i) => (
-                      <div key={`empty-${i}`} className="bracket-team empty">
-                        <span className="seed-number">{(data.bracket[quadKey]?.length || 0) + i + 1}</span>
-                        <div className="bracket-team-info">
-                          <span className="bracket-team-name">TBD</span>
+                      <div key={`empty-${i}`} className="bracket-team-wrapper">
+                        <div className="bracket-team empty">
+                          <span className="seed-number">{(data.bracket[quadKey]?.length || 0) + i + 1}</span>
+                          <div className="bracket-team-info">
+                            <span className="bracket-team-name">TBD</span>
+                          </div>
                         </div>
                       </div>
                     ))

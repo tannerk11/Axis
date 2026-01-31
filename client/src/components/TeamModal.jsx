@@ -174,6 +174,14 @@ function TeamModal({ team, season = '2025-26', onClose }) {
             </div>
           </div>
           <div className="modal-records">
+            {(team.total_wins !== undefined && team.total_losses !== undefined) && (
+              <div className="modal-record">
+                <span className="record-label">Total Record</span>
+                <span className="record-value">
+                  {`${team.total_wins}-${team.total_losses}`}
+                </span>
+              </div>
+            )}
             <div className="modal-record">
               <span className="record-label">NAIA Record</span>
               <span className="record-value">
@@ -269,7 +277,7 @@ function TeamModal({ team, season = '2025-26', onClose }) {
                         {game.opponent_name}
                       </td>
                       <td className="col-type">
-                        <span className={`game-type-badge game-type-${game.game_type.toLowerCase().replace('-', '')}`}>
+                        <span className={`game-type-badge game-type-${game.game_type.toLowerCase().replace(/[-\s]/g, '')}`}>
                           {game.game_type}
                         </span>
                       </td>

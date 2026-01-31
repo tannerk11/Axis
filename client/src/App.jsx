@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import StatGroupTabs from './components/StatGroupTabs';
@@ -12,221 +13,246 @@ import './App.css';
 // In development, use localhost:3001
 const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
+// Default values for URL params
+const DEFAULTS = {
+  league: 'mens',
+  season: '2025-26',
+  conference: 'All Conferences',
+  opponent: 'all',
+  seasonSegment: 'all',
+  statGroup: 'Overview',
+};
+
 function App() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Extract params from URL with defaults
+  const league = searchParams.get('league') || DEFAULTS.league;
+  const season = searchParams.get('season') || DEFAULTS.season;
+  const conference = searchParams.get('conference') || DEFAULTS.conference;
+  const opponent = searchParams.get('opponent') || DEFAULTS.opponent;
+  const seasonSegment = searchParams.get('seasonSegment') || DEFAULTS.seasonSegment;
+  const statGroup = searchParams.get('statGroup') || DEFAULTS.statGroup;
+
   const [teams, setTeams] = useState([]);
   const [conferences, setConferences] = useState([]);
   const [months, setMonths] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [league, setLeague] = useState('mens');
-  const [season, setSeason] = useState('2025-26');
   const [selectedTeam, setSelectedTeam] = useState(null);
-  const [currentPage, setCurrentPage] = useState('teams');
-  const [statGroup, setStatGroup] = useState('Overview');
 
-  const [filters, setFilters] = useState({
-    conference: 'All Conferences',
-    opponent: 'all',
-    seasonSegment: 'all',
-  });
+  // Helper to update URL params
+  const updateParams = useCallback((updates) => {
+    setSearchParams((prev) => {
+      const newParams = new URLSearchParams(prev);
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === DEFAULTS[key]) {
+          newParams.delete(key);
+        } else {
+          newParams.set(key, value);
+        }
+      });
+      return newParams;
+    });
+  }, [setSearchParams]);
 
-  const isInitialMount = useRef(true);
+  // Wrapped setters that update URL
+  const setLeague = useCallback((value) => updateParams({ league: value }), [updateParams]);
+  const setSeason = useCallback((value) => updateParams({ season: value }), [updateParams]);
+  const setStatGroup = useCallback((value) => updateParams({ statGroup: value }), [updateParams]);
 
-  const fetchTeams = async (currentLeague = league, currentSeason = season) => {
+  const setFilters = useCallback((updater) => {
+    if (typeof updater === 'function') {
+      const currentFilters = { conference, opponent, seasonSegment };
+      const newFilters = updater(currentFilters);
+      updateParams(newFilters);
+    } else {
+      updateParams(updater);
+    }
+  }, [conference, opponent, seasonSegment, updateParams]);
+
+  // Derive filters object from URL params
+  const filters = { conference, opponent, seasonSegment };
+
+  // Determine current page from pathname
+  const getCurrentPage = () => {
+    const path = location.pathname;
+    if (path.startsWith('/bracketcast')) return 'bracketcast';
+    if (path.startsWith('/insights')) return 'insights';
+    return 'teams';
+  };
+
+  const currentPage = getCurrentPage();
+
+  const setCurrentPage = useCallback((page) => {
+    // Preserve current search params when navigating
+    const params = searchParams.toString();
+    const newPath = page === 'teams' ? '/' : `/${page}`;
+    navigate(params ? `${newPath}?${params}` : newPath);
+  }, [navigate, searchParams]);
+
+  // Fetch metadata (seasons, conferences, months) - only when league changes
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      try {
+        const [seasonsRes, conferencesRes, monthsRes] = await Promise.all([
+          fetch(`${API_URL}/api/seasons?league=${league}`),
+          fetch(`${API_URL}/api/conferences?league=${league}&season=${season}`),
+          fetch(`${API_URL}/api/months?league=${league}&season=${season}`),
+        ]);
+        
+        const seasonsData = await seasonsRes.json();
+        const conferencesData = await conferencesRes.json();
+        const monthsData = await monthsRes.json();
+        
+        setSeasons(seasonsData || []);
+        setConferences(conferencesData || []);
+        setMonths(monthsData || []);
+      } catch (error) {
+        console.error('Error fetching metadata:', error);
+      }
+    };
+    fetchMetadata();
+  }, [league, season]);
+
+  const fetchTeams = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        league: currentLeague,
-        season: currentSeason,
-        ...(filters.conference !== 'All Conferences' && { conference: filters.conference }),
-        ...(filters.opponent === 'conference' && { gameType: 'conference' }),
-        ...(filters.seasonSegment !== 'all' && { seasonSegment: filters.seasonSegment }),
-      });
+      // Handle seasonSegment - some values are season types, not segments
+      const seasonTypeMap = {
+        'regular': 'Regular Season',
+        'postseason': 'Conference Tournament',
+        'national': 'National Tournament'
+      };
 
-      const response = await fetch(`${API_URL}/api/teams?${params}`);
-      const data = await response.json();
-      setTeams(data);
+      let url = `${API_URL}/api/teams?league=${league}&season=${season}`;
+      
+      if (conference !== 'All Conferences') {
+        url += `&conference=${encodeURIComponent(conference)}`;
+      }
+      if (opponent !== 'all') {
+        url += `&gameType=${encodeURIComponent(opponent)}`;
+      }
+      if (seasonSegment !== 'all') {
+        if (seasonTypeMap[seasonSegment]) {
+          url += `&seasonType=${encodeURIComponent(seasonTypeMap[seasonSegment])}`;
+        } else {
+          url += `&seasonSegment=${encodeURIComponent(seasonSegment)}`;
+        }
+      }
+
+      const response = await fetch(url);
+      const teamsData = await response.json();
+      setTeams(Array.isArray(teamsData) ? teamsData : []);
     } catch (error) {
-      console.error('Failed to fetch teams:', error);
+      console.error('Error fetching teams:', error);
+      setTeams([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [league, season, conference, opponent, seasonSegment]);
 
-  const fetchLastUpdated = async (currentSeason = season) => {
-    try {
-      const response = await fetch(`${API_URL}/api/last-updated?season=${currentSeason}`);
-      const data = await response.json();
-      if (data.lastUpdated) {
-        setLastUpdated(new Date(data.lastUpdated));
-      }
-    } catch (error) {
-      console.error('Failed to fetch last updated:', error);
-    }
-  };
-
-  const fetchConferences = async (currentLeague = league, currentSeason = season) => {
-    try {
-      const response = await fetch(`${API_URL}/api/conferences?league=${currentLeague}&season=${currentSeason}`);
-      const data = await response.json();
-      setConferences(data);
-    } catch (error) {
-      console.error('Failed to fetch conferences:', error);
-    }
-  };
-
-  const fetchMonths = async (currentLeague = league, currentSeason = season) => {
-    try {
-      const response = await fetch(`${API_URL}/api/months?league=${currentLeague}&season=${currentSeason}`);
-      const data = await response.json();
-      setMonths(data);
-    } catch (error) {
-      console.error('Failed to fetch months:', error);
-    }
-  };
-
-  const fetchSeasons = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/seasons`);
-      const data = await response.json();
-      setSeasons(data);
-    } catch (error) {
-      console.error('Failed to fetch seasons:', error);
-    }
-  };
-
+  // Fetch teams when relevant params change
   useEffect(() => {
-    fetchSeasons();
-    fetchConferences();
-    fetchMonths();
     fetchTeams();
-    fetchLastUpdated();
-  }, []);
+  }, [fetchTeams]);
 
-  // Auto-apply when filters change (skip initial mount — handled above)
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    fetchTeams();
-  }, [filters.conference, filters.opponent, filters.seasonSegment]);
-
-  const handleLeagueChange = (newLeague) => {
-    if (newLeague !== league) {
-      setLeague(newLeague);
-      // Reset conference filter when switching leagues
-      setFilters(prev => ({ ...prev, conference: 'All Conferences' }));
-      // Fetch new data for the selected league
-      fetchConferences(newLeague, season);
-      fetchMonths(newLeague, season);
-      // Fetch teams explicitly since league isn't in the filters useEffect deps
-      fetchTeams(newLeague, season);
-    }
+  const handleTeamClick = (team) => {
+    setSelectedTeam(team);
   };
 
-  const handleSeasonChange = (newSeason) => {
-    if (newSeason !== season) {
-      setSeason(newSeason);
-      // Reset filters when switching seasons
-      setFilters({
-        conference: 'All Conferences',
-        opponent: 'all',
-        seasonSegment: 'all',
-      });
-      setStatGroup('Overview');
-      // Fetch all data for the new season
-      fetchConferences(league, newSeason);
-      fetchMonths(league, newSeason);
-      fetchTeams(league, newSeason);
-      fetchLastUpdated(newSeason);
-    }
+  const handleCloseModal = () => {
+    setSelectedTeam(null);
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    updateParams({ [key]: value });
   };
 
-  const handleResetFilters = () => {
-    setStatGroup('Overview');
-    setFilters({
-      conference: 'All Conferences',
-      opponent: 'all',
-      seasonSegment: 'all',
-    });
-    // The useEffect on filters will auto-fetch
-  };
-
-  const formatLastUpdated = () => {
-    if (!lastUpdated) return '';
-    return lastUpdated.toLocaleString('en-US', {
-      month: '2-digit',
-      day: '2-digit',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-      timeZoneName: 'short',
+  const handleFilterReset = () => {
+    updateParams({
+      conference: DEFAULTS.conference,
+      opponent: DEFAULTS.opponent,
+      seasonSegment: DEFAULTS.seasonSegment,
     });
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
+  // Teams page content
+  const TeamsPage = () => (
+    <>
+      <FilterBar
+        conferences={conferences}
+        months={months}
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onReset={handleFilterReset}
+      />
+      <StatGroupTabs
+        active={statGroup}
+        onChange={setStatGroup}
+      />
+      <TeamsTable
+        teams={teams}
+        loading={loading}
+        onTeamClick={handleTeamClick}
+        statGroup={statGroup}
+        league={league}
+        season={season}
+        filters={filters}
+      />
+    </>
+  );
 
   return (
     <div className="app">
       <Header
         league={league}
-        onLeagueChange={handleLeagueChange}
-        activePage={currentPage}
-        onPageChange={handlePageChange}
+        onLeagueChange={setLeague}
         season={season}
+        onSeasonChange={setSeason}
         seasons={seasons}
-        onSeasonChange={handleSeasonChange}
+        lastUpdated={lastUpdated}
+        activePage={currentPage}
+        onPageChange={setCurrentPage}
       />
-
-      {currentPage === 'teams' ? (
-        <main className="main-content">
-          <div className="page-header">
-            <h1>NAIA {league === 'mens' ? "Men's" : "Women's"} Basketball Team Stats</h1>
-            {lastUpdated && (
-              <p className="last-updated">Last Updated {formatLastUpdated()}</p>
-            )}
-          </div>
-
-          <FilterBar
-            conferences={conferences}
-            months={months}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onReset={handleResetFilters}
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<TeamsPage />} />
+          <Route path="/teams" element={<Navigate to="/" replace />} />
+          <Route
+            path="/bracketcast"
+            element={
+              <Bracketcast
+                league={league}
+                season={season}
+                onTeamClick={handleTeamClick}
+              />
+            }
           />
-
-          <StatGroupTabs active={statGroup} onChange={setStatGroup} />
-
-          <TeamsTable
-            teams={teams}
-            loading={loading}
-            statGroup={statGroup}
-            onTeamClick={setSelectedTeam}
+          <Route
+            path="/insights"
+            element={
+              <Insights
+                teams={teams}
+                loading={loading}
+                league={league}
+                season={season}
+                onTeamClick={handleTeamClick}
+              />
+            }
           />
-        </main>
-      ) : currentPage === 'bracketcast' ? (
-        <Bracketcast league={league} season={season} onTeamClick={setSelectedTeam} />
-      ) : currentPage === 'insights' ? (
-        <Insights
-          teams={teams}
+        </Routes>
+      </main>
+      {selectedTeam && (
+        <TeamModal
+          team={selectedTeam}
+          onClose={handleCloseModal}
           league={league}
           season={season}
-          loading={loading}
-          onTeamClick={setSelectedTeam}
         />
-      ) : null}
-
-      {selectedTeam && (
-        <TeamModal team={selectedTeam} season={season} onClose={() => setSelectedTeam(null)} />
       )}
     </div>
   );

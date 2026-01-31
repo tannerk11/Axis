@@ -434,6 +434,7 @@ function TeamsTable({ teams, loading, statGroup = 'Overview', onTeamClick }) {
                         onClick={() => onTeamClick && onTeamClick(team)}
                       >
                         {team.name}
+                        {team.is_conference_champion && <span className="champion-badge" title="Conference Champion (Auto-Bid)">🏆</span>}
                       </span>
                       <span className="team-conference">{team.conference || ''}</span>
                     </div>

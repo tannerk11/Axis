@@ -210,6 +210,11 @@ function extractGames(json, teamId) {
     const eventTypeCode = event.eventType?.code?.toLowerCase() || '';
     const isExhibition = eventTypeCode === 'exhibition' || eventTypeCode === 'scrimmage';
     
+    // Determine if this is a national tournament game (vs conference tournament)
+    // National tournament typically starts mid-March (around March 12-14)
+    const isPostseason = event.postseason || false;
+    const isNationalTournament = isPostseason && gameDate.getMonth() === 2 && gameDate.getDate() >= 12;
+    
     // Get scores (null for future games)
     const teamScore = hasScores && usTeam ? parseInt(usTeam.result) || null : null;
     const opponentScore = hasScores && opponent ? parseInt(opponent.result) || null : null;
@@ -228,7 +233,8 @@ function extractGames(json, teamId) {
       opponent_score: opponentScore,
       is_completed: isCompleted,
       is_conference: event.conference || false,
-      is_postseason: event.postseason || false,
+      is_postseason: isPostseason,
+      is_national_tournament: isNationalTournament,
       is_exhibition: isExhibition,
       event_id: event.eventId,
       ...gameStats
@@ -282,7 +288,7 @@ async function upsertGames(client, games) {
     const query = `
       INSERT INTO games (
         game_id, team_id, opponent_id, opponent_name, game_date, location,
-        team_score, opponent_score, is_completed, is_conference, is_postseason, is_exhibition, event_id,
+        team_score, opponent_score, is_completed, is_conference, is_postseason, is_national_tournament, is_exhibition, event_id,
         fgm, fga, fg_pct, fgm3, fga3, fg3_pct, ftm, fta, ft_pct,
         oreb, dreb, treb, ast, stl, blk, turnovers, pf,
         pts_paint, pts_fastbreak, pts_bench, pts_turnovers, possessions,
@@ -293,15 +299,15 @@ async function upsertGames(client, games) {
         season, updated_at
       )
       VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-        $14, $15, $16, $17, $18, $19, $20, $21, $22,
-        $23, $24, $25, $26, $27, $28, $29, $30,
-        $31, $32, $33, $34, $35,
-        $36, $37, $38, $39, $40, $41, $42, $43, $44,
-        $45, $46, $47, $48, $49, $50, $51, $52,
-        $53, $54, $55, $56, $57,
-        $58, $59, $60, $61,
-        $62, CURRENT_TIMESTAMP
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+        $15, $16, $17, $18, $19, $20, $21, $22, $23,
+        $24, $25, $26, $27, $28, $29, $30, $31,
+        $32, $33, $34, $35, $36,
+        $37, $38, $39, $40, $41, $42, $43, $44, $45,
+        $46, $47, $48, $49, $50, $51, $52, $53,
+        $54, $55, $56, $57, $58,
+        $59, $60, $61, $62,
+        $63, CURRENT_TIMESTAMP
       )
       ON CONFLICT (game_id, season)
       DO UPDATE SET
@@ -310,6 +316,7 @@ async function upsertGames(client, games) {
         is_completed = EXCLUDED.is_completed,
         is_conference = EXCLUDED.is_conference,
         is_postseason = EXCLUDED.is_postseason,
+        is_national_tournament = EXCLUDED.is_national_tournament,
         is_exhibition = EXCLUDED.is_exhibition,
         opponent_name = EXCLUDED.opponent_name,
         fgm = EXCLUDED.fgm, fga = EXCLUDED.fga, fg_pct = EXCLUDED.fg_pct,
@@ -340,7 +347,7 @@ async function upsertGames(client, games) {
       const result = await client.query(query, [
         game.game_id, game.team_id, game.opponent_id, game.opponent_name,
         game.game_date, game.location, game.team_score, game.opponent_score,
-        game.is_completed, game.is_conference, game.is_postseason, game.is_exhibition, game.event_id,
+        game.is_completed, game.is_conference, game.is_postseason, game.is_national_tournament, game.is_exhibition, game.event_id,
         game.fgm, game.fga, game.fg_pct, game.fgm3, game.fga3, game.fg3_pct,
         game.ftm, game.fta, game.ft_pct,
         game.oreb, game.dreb, game.treb, game.ast, game.stl, game.blk,

@@ -132,6 +132,12 @@
   text-align: center !important;
 }
 
+.col-pr {
+  width: 60px;
+  min-width: 60px;
+  text-align: center !important;
+}
+
 .col-team {
   min-width: 200px;
   width: 200px;
@@ -370,6 +376,141 @@
   color: var(--color-text-tertiary);
 }
 
+/* Expandable bracket team wrapper */
+.bracket-team-wrapper {
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.bracket-team-wrapper:last-child {
+  border-bottom: none;
+}
+
+.bracket-team-wrapper .bracket-team {
+  border-bottom: none;
+}
+
+.bracket-team.expandable {
+  cursor: pointer;
+}
+
+.bracket-team.is-host {
+  background-color: rgba(34, 197, 94, 0.08);
+}
+
+.bracket-team.expanded {
+  background-color: var(--color-bg-tertiary);
+}
+
+.bracket-team-meta {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.bracket-team-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.bracket-team-right .bracket-team-record {
+  font-size: 12px;
+}
+
+.host-badge {
+  background-color: #22c55e;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.expand-icon {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  transition: transform 0.2s;
+}
+
+.expand-icon.expanded {
+  transform: rotate(90deg);
+}
+
+/* Potential hosts dropdown */
+.potential-hosts {
+  padding: 8px 16px 12px 52px;
+  background-color: var(--color-bg-secondary);
+  border-top: 1px solid var(--color-border-light);
+}
+
+.potential-hosts-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.potential-host {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.potential-host:last-of-type {
+  border-bottom: none;
+}
+
+.potential-host.conf-conflict .potential-host-name {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.potential-host-rank {
+  width: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.potential-host-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.potential-host-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.potential-host-location {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.potential-host-distance {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-accent);
+  white-space: nowrap;
+}
+
+.conf-conflict-note {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  margin-top: 6px;
+}
+
 .bracket-description,
 .pods-description {
   color: var(--color-text-secondary);
@@ -587,6 +728,11 @@
     min-width: 45px;
   }
 
+  .col-pr {
+    width: 45px;
+    min-width: 45px;
+  }
+
   .col-team {
     min-width: 150px;
     width: 150px;
@@ -733,4 +879,11 @@
     font-size: 9px;
     padding: 2px 6px;
   }
+}
+
+/* Conference Champion Badge */
+.champion-badge {
+  margin-left: 6px;
+  font-size: 14px;
+  cursor: help;
 }
