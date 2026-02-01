@@ -69,6 +69,8 @@ function LogoPoint(props) {
  * @param {function} props.xFormat - Optional formatter for X values
  * @param {function} props.yFormat - Optional formatter for Y values
  * @param {boolean} props.showMeanLines - Whether to show mean reference lines
+ * @param {boolean} props.invertX - Invert X axis (higher values on left)
+ * @param {boolean} props.invertY - Invert Y axis (higher values on bottom)
  * @param {function} props.onTeamClick - Callback when team is clicked
  */
 function InsightScatterChart({ 
@@ -80,6 +82,8 @@ function InsightScatterChart({
   xFormat,
   yFormat,
   showMeanLines = true,
+  invertX = false,
+  invertY = false,
   onTeamClick 
 }) {
   const { theme } = useTheme();
@@ -123,11 +127,20 @@ function InsightScatterChart({
     const yMax = Math.max(...ys);
     const xPadding = (xMax - xMin) * 0.08;
     const yPadding = (yMax - yMin) * 0.08;
+    
+    // Reverse domain if inverted (to flip axis direction)
+    const xDomainCalc = invertX 
+      ? [xMax + xPadding, xMin - xPadding]  // Reversed: high on left
+      : [xMin - xPadding, xMax + xPadding]; // Normal: low on left
+    const yDomainCalc = invertY
+      ? [yMax + yPadding, yMin - yPadding]  // Reversed: high on bottom
+      : [yMin - yPadding, yMax + yPadding]; // Normal: low on bottom
+    
     return {
-      xDomain: [xMin - xPadding, xMax + xPadding],
-      yDomain: [yMin - yPadding, yMax + yPadding],
+      xDomain: xDomainCalc,
+      yDomain: yDomainCalc,
     };
-  }, [chartData]);
+  }, [chartData, invertX, invertY]);
 
   const gridColor = getThemeColor('--color-border-secondary');
   const axisColor = getThemeColor('--color-text-tertiary');

@@ -216,9 +216,9 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
 
           <section className="insight-card">
             <div className="insight-card-header">
-              <h2 className="insight-title">Effective FG% vs Opponent eFG%</h2>
+              <h2 className="insight-title">Shooting Efficiency Margin</h2>
               <p className="insight-description">
-                Team effective field goal % vs opponent effective field goal % — {shootingTeams.length} teams
+                Team eFG% vs defensive eFG% allowed. Top-right = elite shooting + elite defense.
               </p>
             </div>
             <InsightScatterChart
@@ -226,9 +226,10 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               xKey="efg_pct"
               yKey="efg_pct_opp"
               xLabel="Team eFG%"
-              yLabel="Opponent eFG%"
+              yLabel="Opponent eFG% Allowed"
               xFormat={pctFormat}
               yFormat={pctFormat}
+              invertY={true}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -261,7 +262,7 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
             <div className="insight-card-header">
               <h2 className="insight-title">Rebounding Margin</h2>
               <p className="insight-description">
-                Team Defensive Rebound % vs Opponent Offensive Rebound % — {reboundingTeams.length} teams
+                How well you rebound vs how well you prevent opponent rebounds. Top-right = elite on both.
               </p>
             </div>
             <InsightScatterChart
@@ -269,9 +270,10 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               xKey="dreb_pct"
               yKey="oreb_pct_opp"
               xLabel="Team DReb%"
-              yLabel="Opponent OReb%"
+              yLabel="Opponent OReb% Allowed"
               xFormat={pctFormat}
               yFormat={pctFormat}
+              invertY={true}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -285,7 +287,7 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
             <div className="insight-card-header">
               <h2 className="insight-title">Offensive vs Defensive Efficiency</h2>
               <p className="insight-description">
-                Points scored per 100 possessions vs points allowed per 100 possessions — {efficiencyTeams.length} teams
+                Points scored vs points allowed per 100 possessions. Top-right = elite offense + elite defense.
               </p>
             </div>
             <InsightScatterChart
@@ -296,6 +298,7 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yLabel="Defensive Rating"
               xFormat={ratingFormat}
               yFormat={ratingFormat}
+              invertY={true}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -304,17 +307,18 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
             <div className="insight-card-header">
               <h2 className="insight-title">Turnover Battle</h2>
               <p className="insight-description">
-                How often a team turns it over vs how often they force turnovers. Best teams are bottom-right (low own TO%, high forced TO%).
+                Ball security vs forcing turnovers. Top-right = protect the ball AND force turnovers.
               </p>
             </div>
             <InsightScatterChart
               teams={efficiencyTeams}
               xKey="turnover_pct"
               yKey="turnover_pct_opp"
-              xLabel="Own Turnover % (lower = better)"
-              yLabel="Forced Turnover % (higher = better)"
+              xLabel="Own Turnover %"
+              yLabel="Forced Turnover %"
               xFormat={pctFormat}
               yFormat={pctFormat}
+              invertX={true}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -323,17 +327,18 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
             <div className="insight-card-header">
               <h2 className="insight-title">Scoring Efficiency vs Ball Security</h2>
               <p className="insight-description">
-                Can a team score efficiently while also protecting the ball? Best teams are top-left (high offense, low turnovers).
+                Can a team score efficiently while protecting the ball? Top-right = high scoring + low turnovers.
               </p>
             </div>
             <InsightScatterChart
               teams={efficiencyTeams}
               xKey="turnover_pct"
               yKey="offensive_rating"
-              xLabel="Turnover % (lower = better)"
-              yLabel="Offensive Rating (higher = better)"
+              xLabel="Turnover %"
+              yLabel="Offensive Rating"
               xFormat={pctFormat}
               yFormat={ratingFormat}
+              invertX={true}
               onTeamClick={onTeamClick}
             />
           </section>
