@@ -90,8 +90,9 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
   const leagueLabel = league === 'mens' ? "Men's" : "Women's";
 
   // Format functions for different stat types
-  const pctFormatAlreadyPct = (v) => `${v.toFixed(1)}%`;
-  const decFormat = (v) => v.toFixed(1);
+  const pctFormat = (v) => `${v.toFixed(1)}%`;        // Percentages: 34.5%
+  const ratingFormat = (v) => v.toFixed(1);           // Ratings: 102.3
+  const intFormat = (v) => Math.round(v).toString();  // Integers: 72
 
   if (loading) {
     return (
@@ -188,8 +189,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="fg3_pct"
               xLabel="3-Point Rate (%)"
               yLabel="3-Point %"
-              xFormat={pctFormatAlreadyPct}
-              yFormat={pctFormatAlreadyPct}
+              xFormat={pctFormat}
+              yFormat={pctFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -207,8 +208,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="ft_pct"
               xLabel="Free Throw Rate"
               yLabel="Free Throw %"
-              xFormat={pctFormatAlreadyPct}
-              yFormat={pctFormatAlreadyPct}
+              xFormat={pctFormat}
+              yFormat={pctFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -226,8 +227,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="efg_pct_opp"
               xLabel="Team eFG%"
               yLabel="Opponent eFG%"
-              xFormat={pctFormatAlreadyPct}
-              yFormat={pctFormatAlreadyPct}
+              xFormat={pctFormat}
+              yFormat={pctFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -250,8 +251,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="dreb_pct"
               xLabel="Offensive Rebound %"
               yLabel="Defensive Rebound %"
-              xFormat={pctFormatAlreadyPct}
-              yFormat={pctFormatAlreadyPct}
+              xFormat={pctFormat}
+              yFormat={pctFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -269,8 +270,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="oreb_pct_opp"
               xLabel="Team DReb%"
               yLabel="Opponent OReb%"
-              xFormat={pctFormatAlreadyPct}
-              yFormat={pctFormatAlreadyPct}
+              xFormat={pctFormat}
+              yFormat={pctFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -293,8 +294,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="defensive_rating"
               xLabel="Offensive Rating"
               yLabel="Defensive Rating"
-              xFormat={decFormat}
-              yFormat={decFormat}
+              xFormat={ratingFormat}
+              yFormat={ratingFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -312,8 +313,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="turnover_pct_opp"
               xLabel="Team TO% (lower is better)"
               yLabel="Opponent TO% (higher is better)"
-              xFormat={pctFormatAlreadyPct}
-              yFormat={pctFormatAlreadyPct}
+              xFormat={pctFormat}
+              yFormat={pctFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -331,8 +332,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="offensive_rating"
               xLabel="Turnover %"
               yLabel="Offensive Rating"
-              xFormat={pctFormatAlreadyPct}
-              yFormat={decFormat}
+              xFormat={pctFormat}
+              yFormat={ratingFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -355,8 +356,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="pts_paint_per_game"
               xLabel="Pace"
               yLabel="Paint Points/Game"
-              xFormat={decFormat}
-              yFormat={decFormat}
+              xFormat={intFormat}
+              yFormat={ratingFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -374,8 +375,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="pts_fastbreak_per_game"
               xLabel="Pace"
               yLabel="Fastbreak Points/Game"
-              xFormat={decFormat}
-              yFormat={decFormat}
+              xFormat={intFormat}
+              yFormat={ratingFormat}
               onTeamClick={onTeamClick}
             />
           </section>
@@ -393,8 +394,8 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yKey="three_pt_rate"
               xLabel="Paint Points/Game"
               yLabel="3-Point Rate (%)"
-              xFormat={decFormat}
-              yFormat={pctFormatAlreadyPct}
+              xFormat={ratingFormat}
+              yFormat={pctFormat}
               onTeamClick={onTeamClick}
             />
           </section>
