@@ -304,15 +304,15 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
             <div className="insight-card-header">
               <h2 className="insight-title">Turnover Battle</h2>
               <p className="insight-description">
-                Team Turnover % vs Opponent Turnover % (forcing turnovers) — {efficiencyTeams.length} teams
+                How often a team turns it over vs how often they force turnovers. Best teams are bottom-right (low own TO%, high forced TO%).
               </p>
             </div>
             <InsightScatterChart
               teams={efficiencyTeams}
               xKey="turnover_pct"
               yKey="turnover_pct_opp"
-              xLabel="Team TO% (lower is better)"
-              yLabel="Opponent TO% (higher is better)"
+              xLabel="Own Turnover % (lower = better)"
+              yLabel="Forced Turnover % (higher = better)"
               xFormat={pctFormat}
               yFormat={pctFormat}
               onTeamClick={onTeamClick}
@@ -321,17 +321,17 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
 
           <section className="insight-card">
             <div className="insight-card-header">
-              <h2 className="insight-title">Scoring vs Turnovers</h2>
+              <h2 className="insight-title">Scoring Efficiency vs Ball Security</h2>
               <p className="insight-description">
-                Offensive Rating vs Turnover Percentage — {efficiencyTeams.length} teams
+                Can a team score efficiently while also protecting the ball? Best teams are top-left (high offense, low turnovers).
               </p>
             </div>
             <InsightScatterChart
               teams={efficiencyTeams}
               xKey="turnover_pct"
               yKey="offensive_rating"
-              xLabel="Turnover %"
-              yLabel="Offensive Rating"
+              xLabel="Turnover % (lower = better)"
+              yLabel="Offensive Rating (higher = better)"
               xFormat={pctFormat}
               yFormat={ratingFormat}
               onTeamClick={onTeamClick}
