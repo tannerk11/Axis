@@ -90,9 +90,9 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
   const leagueLabel = league === 'mens' ? "Men's" : "Women's";
 
   // Format functions for different stat types
-  const pctFormat = (v) => `${v.toFixed(1)}%`;        // Percentages: 34.5%
-  const ratingFormat = (v) => v.toFixed(1);           // Ratings: 102.3
-  const intFormat = (v) => Math.round(v).toString();  // Integers: 72
+  const pctFormat = (v) => `${(v * 100).toFixed(1)}%`;  // Convert decimal to %: 0.345 -> 34.5%
+  const ratingFormat = (v) => v.toFixed(1);              // Ratings: 102.3
+  const intFormat = (v) => Math.round(v).toString();     // Integers: 72
 
   if (loading) {
     return (
