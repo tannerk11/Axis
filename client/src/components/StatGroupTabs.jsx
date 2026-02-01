@@ -16,7 +16,7 @@ function StatGroupTabs({ active, onChange }) {
       {STAT_GROUPS.map((group) => (
         <button
           key={group.key}
-          className={`stat-group-tab ${active === group.key ? 'stat-group-tab-active' : ''}`}
+          className={`stat-group-tab ${active === group.key ? 'active' : ''}`}
           onClick={() => onChange(group.key)}
         >
           {group.label}

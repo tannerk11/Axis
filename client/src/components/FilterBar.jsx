@@ -54,7 +54,9 @@ function FilterBar({ conferences, months, filters, onFilterChange, onReset }) {
       </div>
 
       <div className="filter-actions">
-        <button className="reset-btn" onClick={onReset}>Reset</button>
+        <button className="reset-btn" onClick={onReset}>
+          Reset Filters
+        </button>
       </div>
     </div>
   );

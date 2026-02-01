@@ -1,0 +1,168 @@
+.player-visualizations {
+  padding: 0;
+}
+
+/* Controls */
+.player-viz-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 0 24px 16px;
+  flex-wrap: wrap;
+}
+
+.player-viz-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.player-viz-tab {
+  padding: 7px 16px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 20px;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.player-viz-tab:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-tertiary);
+}
+
+.player-viz-tab.active {
+  background-color: var(--color-accent-primary);
+  color: var(--color-text-inverted);
+  border-color: var(--color-accent-primary);
+}
+
+.player-viz-filter {
+  flex-shrink: 0;
+}
+
+.player-viz-select {
+  padding: 8px 32px 8px 12px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  background-color: var(--color-bg-secondary);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.player-viz-select:hover {
+  border-color: var(--color-text-tertiary);
+}
+
+/* Content */
+.player-viz-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Reuse insight-card styles from Insights.css */
+.player-visualizations .insight-card {
+  margin: 0 24px 24px;
+  padding: 24px;
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+}
+
+.player-visualizations .insight-card-header {
+  margin-bottom: 16px;
+}
+
+.player-visualizations .insight-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.player-visualizations .insight-description {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+/* Tablet */
+@media (max-width: 768px) {
+  .player-viz-controls {
+    padding: 0 16px 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .player-viz-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+  }
+
+  .player-viz-tab {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+
+  .player-visualizations .insight-card {
+    margin: 0 16px 20px;
+    padding: 16px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .player-viz-controls {
+    padding: 0 12px 12px;
+    gap: 6px;
+  }
+
+  .player-viz-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+
+  .player-visualizations .insight-card {
+    margin: 0 12px 16px;
+    padding: 16px;
+  }
+}
+
+/* Small mobile */
+@media (max-width: 480px) {
+  .player-viz-controls {
+    padding: 0 8px 10px;
+    gap: 4px;
+  }
+
+  .player-viz-tab {
+    padding: 6px 10px;
+    font-size: 11px;
+    min-height: 32px;
+    border-radius: 16px;
+  }
+
+  .player-visualizations .insight-card {
+    margin: 0 8px 12px;
+    padding: 12px;
+  }
+}

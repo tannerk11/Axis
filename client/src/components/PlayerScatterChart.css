@@ -1,0 +1,106 @@
+.player-scatter-chart {
+  width: 100%;
+}
+
+.player-scatter-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+/* Tooltip */
+.player-scatter-tooltip {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+}
+
+.player-scatter-tooltip .tooltip-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-secondary);
+}
+
+.player-scatter-tooltip .tooltip-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  object-fit: contain;
+  background: var(--color-bg-secondary);
+}
+
+.player-scatter-tooltip .tooltip-player-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.player-scatter-tooltip .tooltip-player-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-scatter-tooltip .tooltip-team-name {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-scatter-tooltip .tooltip-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.player-scatter-tooltip .tooltip-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.player-scatter-tooltip .stat-label {
+  color: var(--color-text-secondary);
+}
+
+.player-scatter-tooltip .stat-value {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .player-scatter-tooltip {
+    padding: 10px;
+    min-width: 160px;
+  }
+
+  .player-scatter-tooltip .tooltip-logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .player-scatter-tooltip .tooltip-player-name {
+    font-size: 13px;
+  }
+
+  .player-scatter-tooltip .tooltip-stat {
+    font-size: 12px;
+  }
+}

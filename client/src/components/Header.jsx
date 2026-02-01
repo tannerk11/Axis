@@ -2,14 +2,7 @@ import './Header.css';
 import logoSrc from '../assets/logo.svg';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 
-const PAGE_LABELS = {
-  teams: 'Teams',
-  bracketcast: 'Bracketcast',
-  scout: 'Scout',
-  insights: 'Insights'
-};
-
-function Header({ league, onLeagueChange, activePage, onPageChange, season, seasons, onSeasonChange, lastUpdated }) {
+function Header({ league, onLeagueChange, activePage, onPageChange, season, seasons, onSeasonChange, lastUpdated, hasPlayers }) {
   const { theme, toggleTheme } = useTheme();
 
   const formatLastUpdated = (dateStr) => {
@@ -108,9 +101,10 @@ function Header({ league, onLeagueChange, activePage, onPageChange, season, seas
               value={activePage}
               onChange={(e) => onPageChange(e.target.value)}
             >
-              {Object.entries(PAGE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>{label}</option>
-              ))}
+              <option value="teams">Teams</option>
+              {hasPlayers && <option value="players">Players</option>}
+              <option value="bracketcast">Bracketcast</option>
+              <option value="scout">Scout</option>
             </select>
           </div>
         </div>
@@ -122,6 +116,14 @@ function Header({ league, onLeagueChange, activePage, onPageChange, season, seas
           >
             Teams
           </button>
+          {hasPlayers && (
+            <button
+              className={`nav-button ${activePage === 'players' ? 'active' : ''}`}
+              onClick={() => onPageChange('players')}
+            >
+              Players
+            </button>
+          )}
           <button
             className={`nav-button ${activePage === 'bracketcast' ? 'active' : ''}`}
             onClick={() => onPageChange('bracketcast')}
@@ -133,12 +135,6 @@ function Header({ league, onLeagueChange, activePage, onPageChange, season, seas
             onClick={() => onPageChange('scout')}
           >
             Scout
-          </button>
-          <button
-            className={`nav-button ${activePage === 'insights' ? 'active' : ''}`}
-            onClick={() => onPageChange('insights')}
-          >
-            Insights
           </button>
         </div>
       </nav>

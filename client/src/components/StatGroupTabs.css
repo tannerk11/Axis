@@ -31,13 +31,13 @@
   border-color: var(--color-text-tertiary);
 }
 
-.stat-group-tab-active {
+.stat-group-tab.active {
   background-color: var(--color-accent-primary);
   color: var(--color-text-inverted);
   border-color: var(--color-accent-primary);
 }
 
-.stat-group-tab-active:hover {
+.stat-group-tab.active:hover {
   background-color: var(--color-accent-primary-hover);
   border-color: var(--color-accent-primary-hover);
   color: var(--color-text-inverted);

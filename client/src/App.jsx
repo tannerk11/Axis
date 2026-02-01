@@ -3,11 +3,13 @@ import { Routes, Route, Navigate, useSearchParams, useLocation, useNavigate } fr
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
 import StatGroupTabs from './components/StatGroupTabs';
+import ViewToggle from './components/ViewToggle';
 import TeamsTable from './components/TeamsTable';
 import TeamModal from './components/TeamModal';
 import Bracketcast from './components/Bracketcast';
 import Insights from './components/Insights';
 import Scout from './components/Scout';
+import Players from './components/Players';
 import './App.css';
 
 // In production, API is served from same origin (empty string)
@@ -22,6 +24,7 @@ const DEFAULTS = {
   opponent: 'all',
   seasonSegment: 'all',
   statGroup: 'Overview',
+  view: 'table',
 };
 
 function App() {
@@ -36,6 +39,7 @@ function App() {
   const opponent = searchParams.get('opponent') || DEFAULTS.opponent;
   const seasonSegment = searchParams.get('seasonSegment') || DEFAULTS.seasonSegment;
   const statGroup = searchParams.get('statGroup') || DEFAULTS.statGroup;
+  const view = searchParams.get('view') || DEFAULTS.view;
 
   const [teams, setTeams] = useState([]);
   const [conferences, setConferences] = useState([]);
@@ -44,6 +48,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [hasPlayers, setHasPlayers] = useState(false);
 
   // Helper to update URL params
   const updateParams = useCallback((updates) => {
@@ -64,6 +69,7 @@ function App() {
   const setLeague = useCallback((value) => updateParams({ league: value }), [updateParams]);
   const setSeason = useCallback((value) => updateParams({ season: value }), [updateParams]);
   const setStatGroup = useCallback((value) => updateParams({ statGroup: value }), [updateParams]);
+  const setView = useCallback((value) => updateParams({ view: value }), [updateParams]);
 
   const setFilters = useCallback((updater) => {
     if (typeof updater === 'function') {
@@ -82,8 +88,8 @@ function App() {
   const getCurrentPage = () => {
     const path = location.pathname;
     if (path.startsWith('/bracketcast')) return 'bracketcast';
-    if (path.startsWith('/insights')) return 'insights';
     if (path.startsWith('/scout')) return 'scout';
+    if (path.startsWith('/players')) return 'players';
     return 'teams';
   };
 
@@ -100,22 +106,25 @@ function App() {
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const [seasonsRes, conferencesRes, monthsRes, lastUpdatedRes] = await Promise.all([
+        const [seasonsRes, conferencesRes, monthsRes, lastUpdatedRes, playersExistsRes] = await Promise.all([
           fetch(`${API_URL}/api/seasons?league=${league}`),
           fetch(`${API_URL}/api/conferences?league=${league}&season=${season}`),
           fetch(`${API_URL}/api/months?league=${league}&season=${season}`),
           fetch(`${API_URL}/api/last-updated?league=${league}&season=${season}`),
+          fetch(`${API_URL}/api/players/exists?league=${league}&season=${season}`),
         ]);
         
         const seasonsData = await seasonsRes.json();
         const conferencesData = await conferencesRes.json();
         const monthsData = await monthsRes.json();
         const lastUpdatedData = await lastUpdatedRes.json();
+        const playersExistsData = await playersExistsRes.json();
         
         setSeasons(seasonsData || []);
         setConferences(conferencesData || []);
         setMonths(monthsData || []);
         setLastUpdated(lastUpdatedData.lastUpdated || null);
+        setHasPlayers(playersExistsData.hasPlayers || false);
       } catch (error) {
         console.error('Error fetching metadata:', error);
       }
@@ -194,6 +203,7 @@ function App() {
         <h1>Teams</h1>
         <p className="page-subtitle">Compare team statistics, ratings, and performance metrics across the {leagueLabel.toLowerCase()} division</p>
       </div>
+      <ViewToggle activeView={view} onViewChange={setView} />
       <FilterBar
         conferences={conferences}
         months={months}
@@ -201,19 +211,33 @@ function App() {
         onFilterChange={handleFilterChange}
         onReset={handleFilterReset}
       />
-      <StatGroupTabs
-        active={statGroup}
-        onChange={setStatGroup}
-      />
-      <TeamsTable
-        teams={teams}
-        loading={loading}
-        onTeamClick={handleTeamClick}
-        statGroup={statGroup}
-        league={league}
-        season={season}
-        filters={filters}
-      />
+      {view === 'table' ? (
+        <>
+          <StatGroupTabs
+            active={statGroup}
+            onChange={setStatGroup}
+          />
+          <TeamsTable
+            teams={teams}
+            loading={loading}
+            onTeamClick={handleTeamClick}
+            statGroup={statGroup}
+            league={league}
+            season={season}
+            filters={filters}
+          />
+        </>
+      ) : (
+        <Insights
+          teams={teams}
+          conferences={conferences}
+          loading={loading}
+          league={league}
+          season={season}
+          onTeamClick={handleTeamClick}
+          embedded={true}
+        />
+      )}
     </>
   );
 
@@ -228,28 +252,17 @@ function App() {
         lastUpdated={lastUpdated}
         activePage={currentPage}
         onPageChange={setCurrentPage}
+        hasPlayers={hasPlayers}
       />
       <main className="main-content">
         <Routes>
           <Route path="/" element={<TeamsPage />} />
           <Route path="/teams" element={<Navigate to="/" replace />} />
+          <Route path="/insights" element={<Navigate to="/?view=visualizations" replace />} />
           <Route
             path="/bracketcast"
             element={
               <Bracketcast
-                league={league}
-                season={season}
-                onTeamClick={handleTeamClick}
-              />
-            }
-          />
-          <Route
-            path="/insights"
-            element={
-              <Insights
-                teams={teams}
-                conferences={conferences}
-                loading={loading}
                 league={league}
                 season={season}
                 onTeamClick={handleTeamClick}
@@ -263,6 +276,16 @@ function App() {
                 league={league}
                 season={season}
                 teams={teams}
+                conferences={conferences}
+              />
+            }
+          />
+          <Route
+            path="/players"
+            element={
+              <Players
+                league={league}
+                season={season}
                 conferences={conferences}
               />
             }

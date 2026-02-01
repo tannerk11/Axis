@@ -1,0 +1,477 @@
+.players-page {
+  padding: 0;
+}
+
+/* Filters - matching FilterBar.css */
+.players-filters {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px 24px;
+  background-color: var(--color-bg-primary);
+  flex-wrap: wrap;
+}
+
+.players-filters .filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  width: 100%;
+}
+
+.players-filters .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.players-filters .filter-group label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.players-filters .filter-group select,
+.players-filters .filter-group input {
+  padding: 10px 36px 10px 12px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  min-width: 150px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.players-filters .filter-group input {
+  padding: 10px 12px;
+  background-image: none;
+  cursor: text;
+}
+
+.players-filters .filter-group select:hover,
+.players-filters .filter-group input:hover {
+  border-color: var(--color-text-tertiary);
+}
+
+.players-filters .filter-group select:focus,
+.players-filters .filter-group input:focus {
+  outline: none;
+  border-color: var(--color-accent-primary);
+}
+
+.players-filters .filter-group input[type="number"] {
+  width: 80px;
+  min-width: 80px;
+}
+
+.players-filters .filter-actions {
+  display: flex;
+  align-items: flex-end;
+  margin-left: auto;
+}
+
+.players-filters .reset-btn {
+  padding: 10px 20px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.players-filters .reset-btn:hover {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-text-tertiary);
+}
+
+/* Stat Group Tabs - matching StatGroupTabs.css */
+.stat-group-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 24px 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.stat-group-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.stat-group-tab {
+  padding: 7px 16px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 20px;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.stat-group-tab:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-tertiary);
+}
+
+.stat-group-tab.active {
+  background-color: var(--color-accent-primary);
+  color: var(--color-text-inverted);
+  border-color: var(--color-accent-primary);
+}
+
+.stat-group-tab.active:hover {
+  background-color: var(--color-accent-primary-hover);
+  border-color: var(--color-accent-primary-hover);
+  color: var(--color-text-inverted);
+}
+
+/* Table Wrapper */
+.players-table-wrapper {
+  padding: 0 24px 24px;
+}
+
+.players-table-container {
+  overflow-x: auto;
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  background-color: var(--color-bg-secondary);
+}
+
+/* Loading */
+.loading {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+/* Table */
+.players-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+.players-table thead tr {
+  background-color: var(--color-bg-primary);
+}
+
+.players-table th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--color-border-secondary);
+  background-color: var(--color-bg-primary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.players-table th:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-primary);
+}
+
+.players-table th.sortable {
+  cursor: pointer;
+}
+
+.players-table th.sorted {
+  color: var(--color-accent-primary);
+}
+
+.sort-arrow {
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+.players-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--color-border-tertiary);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-secondary);
+}
+
+.players-table tbody tr:hover td {
+  background-color: var(--color-bg-tertiary);
+}
+
+/* Sticky columns - Rank */
+.players-table .rank-col {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  width: 50px;
+  min-width: 50px;
+  text-align: center !important;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.players-table th.rank-col {
+  z-index: 30;
+}
+
+/* Sticky columns - Player */
+.players-table .player-col {
+  position: sticky;
+  left: 50px;
+  z-index: 10;
+  min-width: 180px;
+  border-right: 2px solid var(--color-border-secondary);
+}
+
+.players-table th.player-col {
+  z-index: 30;
+}
+
+/* Add shadow to sticky columns when scrolling */
+.players-table .player-col::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -8px;
+  bottom: 0;
+  width: 8px;
+  background: linear-gradient(to right, var(--color-sticky-shadow), transparent);
+  pointer-events: none;
+}
+
+.player-uniform {
+  color: var(--color-text-tertiary);
+  font-size: 12px;
+  margin-right: 6px;
+  font-weight: 400;
+}
+
+.player-name {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-size: 13px;
+}
+
+/* Team column */
+.team-col {
+  min-width: 200px;
+}
+
+.team-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team-cell .team-name {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* Position and year columns */
+.pos-col,
+.year-col {
+  width: 55px;
+  min-width: 55px;
+  text-align: center !important;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+/* Stat columns */
+.stat-col {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  min-width: 70px;
+  font-size: 13px;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-top: 1px solid var(--color-border-tertiary);
+  background: var(--color-bg-secondary);
+}
+
+.pagination button {
+  padding: 8px 16px;
+  border: 1px solid var(--color-border-secondary);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-accent-primary);
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .players-filters {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .players-filters .filter-row {
+    gap: 12px;
+  }
+
+  .players-filters .filter-group {
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+
+  .players-filters .filter-group select,
+  .players-filters .filter-group input {
+    min-width: 0;
+    width: 100%;
+    padding: 10px 32px 10px 12px;
+    font-size: 14px;
+  }
+
+  .players-filters .filter-group input {
+    padding: 10px 12px;
+  }
+
+  .players-filters .filter-group label {
+    font-size: 11px;
+  }
+
+  .players-filters .filter-actions {
+    flex: 1 1 100%;
+    margin-left: 0;
+    margin-top: 4px;
+  }
+
+  .players-filters .reset-btn {
+    flex: 1;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .stat-group-tabs {
+    padding: 0 16px 14px;
+    gap: 6px;
+  }
+
+  .stat-group-tab {
+    padding: 8px 14px;
+    font-size: 12px;
+    min-height: 36px;
+  }
+
+  .players-table-wrapper {
+    padding: 0 12px 12px;
+  }
+
+  .players-table-container {
+    max-height: calc(100vh - 380px);
+  }
+
+  .players-table {
+    font-size: 13px;
+  }
+
+  .players-table th {
+    padding: 10px 8px;
+    font-size: 10px;
+  }
+
+  .players-table td {
+    padding: 10px 8px;
+  }
+
+  .players-table .rank-col {
+    width: 35px;
+    min-width: 35px;
+  }
+
+  .players-table .player-col {
+    left: 35px;
+    min-width: 140px;
+  }
+
+  .team-cell .team-name {
+    display: none;
+  }
+
+  .stat-col {
+    min-width: 55px;
+  }
+}
+
+/* Player Visualizations Placeholder */
+.player-visualizations-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 48px 24px;
+}
+
+.player-visualizations-placeholder .coming-soon {
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.player-visualizations-placeholder .coming-soon svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.player-visualizations-placeholder .coming-soon h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.player-visualizations-placeholder .coming-soon p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+}

@@ -7,6 +7,36 @@ import SeasonTrajectoryChart from './SeasonTrajectoryChart';
 
 const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
 
+// Normalize year values to consistent format
+const normalizeYear = (year) => {
+  if (!year) return '-';
+  const y = year.toLowerCase().trim().replace('.', '');
+  if (y === 'fr' || y === 'freshman') return 'Fr';
+  if (y === 'so' || y === 'sophomore') return 'So';
+  if (y === 'jr' || y === 'junior') return 'Jr';
+  if (y === 'sr' || y === 'senior') return 'Sr';
+  if (y === 'gr' || y === 'grad' || y === 'grad senior' || y === 'graduate') return 'Gr';
+  if (y.includes('r-') || y.includes('rs ') || y.includes('redshirt')) return 'RS';
+  return year;
+};
+
+// Normalize position values to consistent format
+const normalizePosition = (pos) => {
+  if (!pos) return '-';
+  const p = pos.toLowerCase().trim();
+  if (p === 'guard' || p === 'g') return 'G';
+  if (p === 'forward' || p === 'f') return 'F';
+  if (p === 'center' || p === 'c') return 'C';
+  if (p === 'point guard' || p === 'pg') return 'PG';
+  if (p === 'shooting guard' || p === 'sg') return 'SG';
+  if (p === 'small forward' || p === 'sf') return 'SF';
+  if (p === 'power forward' || p === 'pf') return 'PF';
+  if (p === 'g/f' || p === 'guard/forward') return 'G/F';
+  if (p === 'f/c' || p === 'forward/center') return 'F/C';
+  if (p === 'w' || p === 'wing') return 'W';
+  return pos.toUpperCase();
+};
+
 // Stat tooltips for header hover descriptions
 const TOOLTIPS = {
   games_played: 'Games Played - Total NAIA games played this season',
@@ -134,6 +164,7 @@ function Scout({ league, season, teams = [], conferences = [] }) {
   const [teamData, setTeamData] = useState(null);
   const [splits, setSplits] = useState([]);
   const [schedule, setSchedule] = useState([]);
+  const [roster, setRoster] = useState([]);
   const [percentiles, setPercentiles] = useState(null);
   const [loading, setLoading] = useState(false);
   const [statGroup, setStatGroup] = useState('Overview');
@@ -180,6 +211,7 @@ function Scout({ league, season, teams = [], conferences = [] }) {
       setTeamData(null);
       setSplits([]);
       setSchedule([]);
+      setRoster([]);
       setPercentiles(null);
       return;
     }
@@ -187,22 +219,26 @@ function Scout({ league, season, teams = [], conferences = [] }) {
     const fetchTeamData = async () => {
       setLoading(true);
       try {
-        const [splitsRes, scheduleRes, percentilesRes] = await Promise.all([
+        const [splitsRes, scheduleRes, percentilesRes, rosterRes] = await Promise.all([
           fetch(`${API_URL}/api/teams/${selectedTeamId}/splits?season=${season}`),
           fetch(`${API_URL}/api/teams/${selectedTeamId}/schedule?season=${season}`),
-          fetch(`${API_URL}/api/teams/${selectedTeamId}/percentiles?season=${season}`)
+          fetch(`${API_URL}/api/teams/${selectedTeamId}/percentiles?season=${season}`),
+          fetch(`${API_URL}/api/teams/${selectedTeamId}/roster?season=${season}`)
         ]);
         const splitsData = await splitsRes.json();
         const scheduleData = await scheduleRes.json();
         const percentilesData = await percentilesRes.json();
+        const rosterData = await rosterRes.json();
         setSplits(splitsData.splits || []);
         setSchedule(scheduleData.games || []);
+        setRoster(rosterData.roster || []);
         setPercentiles(percentilesData);
         setTeamData(selectedTeam);
       } catch (error) {
         console.error('Error fetching team data:', error);
         setSplits([]);
         setSchedule([]);
+        setRoster([]);
         setPercentiles(null);
       } finally {
         setLoading(false);
@@ -697,6 +733,58 @@ function Scout({ league, season, teams = [], conferences = [] }) {
                             </span>
                           ) : '-'}
                         </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* Roster Section */}
+          {roster.length > 0 && (
+            <section className="scout-section">
+              <div className="scout-section-header">
+                <h3>Roster</h3>
+              </div>
+              
+              <div className="scout-table-container">
+                <table className="scout-roster-table">
+                  <thead>
+                    <tr>
+                      <th className="col-uniform">#</th>
+                      <th className="col-player">Player</th>
+                      <th className="col-pos">Pos</th>
+                      <th className="col-year">Yr</th>
+                      <th className="col-ht">Ht</th>
+                      <th className="col-gp">GP</th>
+                      <th className="col-mpg">MPG</th>
+                      <th className="col-ppg">PPG</th>
+                      <th className="col-rpg">RPG</th>
+                      <th className="col-apg">APG</th>
+                      <th className="col-fg">FG%</th>
+                      <th className="col-3p">3P%</th>
+                      <th className="col-ft">FT%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {roster.map((player) => (
+                      <tr key={player.player_id}>
+                        <td className="col-uniform">{player.uniform || '-'}</td>
+                        <td className="col-player">
+                          {player.first_name} {player.last_name}
+                        </td>
+                        <td className="col-pos">{normalizePosition(player.position)}</td>
+                        <td className="col-year">{normalizeYear(player.year)}</td>
+                        <td className="col-ht">{player.height || '-'}</td>
+                        <td className="col-gp">{player.gp}</td>
+                        <td className="col-mpg">{parseFloat(player.min_pg).toFixed(1)}</td>
+                        <td className="col-ppg">{parseFloat(player.pts_pg).toFixed(1)}</td>
+                        <td className="col-rpg">{parseFloat(player.reb_pg).toFixed(1)}</td>
+                        <td className="col-apg">{parseFloat(player.ast_pg).toFixed(1)}</td>
+                        <td className="col-fg">{parseFloat(player.fg_pct).toFixed(1)}%</td>
+                        <td className="col-3p">{parseFloat(player.fg3_pct).toFixed(1)}%</td>
+                        <td className="col-ft">{parseFloat(player.ft_pct).toFixed(1)}%</td>
                       </tr>
                     ))}
                   </tbody>

@@ -13,47 +13,16 @@ const TABS = [
   { id: 'pace', label: 'Pace & Style' },
 ];
 
-// Filter options for team count
-const FILTER_OPTIONS = [
-  { value: 'top64', label: 'Top 64 Teams' },
-  { value: 'top128', label: 'Top 128 Teams' },
-  { value: 'all', label: 'All Teams' },
-];
-
-function Insights({ teams, conferences = [], league, season, loading, onTeamClick }) {
+function Insights({ teams, conferences = [], league, season, loading, onTeamClick, embedded = false }) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [filter, setFilter] = useState('top64'); // Default to top 64
 
-  // Get the filter limit or conference name
-  const getFilterLimit = (filterValue) => {
-    if (filterValue === 'top64') return 64;
-    if (filterValue === 'top128') return 128;
-    if (filterValue === 'all') return Infinity;
-    return Infinity; // Conference filter - no limit
-  };
-
-  const isConferenceFilter = (filterValue) => {
-    return !['top64', 'top128', 'all'].includes(filterValue);
-  };
-
-  // Base filtered teams (by conference or top N)
+  // Use all teams passed in (filtering is done by parent via FilterBar)
   const baseFilteredTeams = useMemo(() => {
     if (!teams || teams.length === 0) return [];
     
-    let filtered = [...teams];
-    
-    // If filtering by conference
-    if (isConferenceFilter(filter)) {
-      filtered = filtered.filter(t => t.conference === filter);
-    }
-    
     // Sort by adjusted_net_rating (best first)
-    filtered.sort((a, b) => (b.adjusted_net_rating || 0) - (a.adjusted_net_rating || 0));
-    
-    // Apply limit
-    const limit = getFilterLimit(filter);
-    return filtered.slice(0, limit);
-  }, [teams, filter]);
+    return [...teams].sort((a, b) => (b.adjusted_net_rating || 0) - (a.adjusted_net_rating || 0));
+  }, [teams]);
 
   // Filter teams with required stats for each visualization
   const topTeams = useMemo(() => {
@@ -95,6 +64,9 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
   const intFormat = (v) => Math.round(v).toString();     // Integers: 72
 
   if (loading) {
+    if (embedded) {
+      return <div className="loading">Loading visualizations...</div>;
+    }
     return (
       <main className="main-content insights-page">
         <div className="page-header">
@@ -105,14 +77,10 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
     );
   }
 
-  return (
-    <main className="main-content insights-page">
-      <div className="page-header">
-        <h1>Insights</h1>
-        <p className="page-subtitle">Advanced visualizations and analytical deep dives into team performance</p>
-      </div>
+  const content = (
+    <>
 
-      {/* Controls: Tabs + Filter */}
+      {/* Tab Navigation */}
       <div className="insights-controls">
         <div className="insights-tab-nav">
           {TABS.map(tab => (
@@ -124,27 +92,6 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               {tab.label}
             </button>
           ))}
-        </div>
-
-        <div className="insights-filter">
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="insights-filter-select"
-          >
-            <optgroup label="Top Teams">
-              {FILTER_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </optgroup>
-            {conferences.length > 0 && (
-              <optgroup label="By Conference">
-                {conferences.map(conf => (
-                  <option key={conf} value={conf}>{conf}</option>
-                ))}
-              </optgroup>
-            )}
-          </select>
         </div>
       </div>
 
@@ -386,6 +333,20 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
           </section>
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className="insights-embedded">{content}</div>;
+  }
+
+  return (
+    <main className="main-content insights-page">
+      <div className="page-header">
+        <h1>Insights</h1>
+        <p className="page-subtitle">Advanced visualizations and analytical deep dives into team performance</p>
+      </div>
+      {content}
     </main>
   );
 }
