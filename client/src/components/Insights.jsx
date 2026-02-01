@@ -243,7 +243,7 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
             <div className="insight-card-header">
               <h2 className="insight-title">Offensive vs Defensive Rebounding</h2>
               <p className="insight-description">
-                Offensive Rebound % vs Defensive Rebound % — {reboundingTeams.length} teams
+                How well a team creates second chances vs prevents opponent second chances. Top-right = elite on both.
               </p>
             </div>
             <InsightScatterChart
@@ -254,26 +254,6 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
               yLabel="Defensive Rebound %"
               xFormat={pctFormat}
               yFormat={pctFormat}
-              onTeamClick={onTeamClick}
-            />
-          </section>
-
-          <section className="insight-card">
-            <div className="insight-card-header">
-              <h2 className="insight-title">Rebounding Margin</h2>
-              <p className="insight-description">
-                How well you rebound vs how well you prevent opponent rebounds. Top-right = elite on both.
-              </p>
-            </div>
-            <InsightScatterChart
-              teams={reboundingTeams}
-              xKey="dreb_pct"
-              yKey="oreb_pct_opp"
-              xLabel="Team DReb%"
-              yLabel="Opponent OReb% Allowed"
-              xFormat={pctFormat}
-              yFormat={pctFormat}
-              invertY={true}
               onTeamClick={onTeamClick}
             />
           </section>

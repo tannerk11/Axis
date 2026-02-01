@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useState, useId } from 'react';
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ReferenceLine,
+  Tooltip, ResponsiveContainer, ReferenceLine, ReferenceArea,
 } from 'recharts';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import './InsightScatterChart.css';
@@ -146,6 +146,24 @@ function InsightScatterChart({
   const axisColor = getThemeColor('--color-text-tertiary');
   const refLineColor = getThemeColor('--color-text-tertiary');
 
+  // Calculate the "best" quadrant bounds (top-right visually)
+  // When inverted, the "good" direction flips, so we need to pick the right bounds
+  const bestQuadrant = useMemo(() => {
+    // X axis: right side is "best" (higher x visually)
+    // If invertX, lower values are on right, so x1 = min, x2 = mean
+    // If not inverted, higher values are on right, so x1 = mean, x2 = max
+    const x1 = invertX ? xDomain[1] : meanX;  // xDomain[1] is left when inverted
+    const x2 = invertX ? meanX : xDomain[1];
+    
+    // Y axis: top is "best" (higher y visually)
+    // If invertY, lower values are on top, so y1 = min, y2 = mean
+    // If not inverted, higher values are on top, so y1 = mean, y2 = max
+    const y1 = invertY ? yDomain[1] : meanY;
+    const y2 = invertY ? meanY : yDomain[1];
+    
+    return { x1, x2, y1, y2 };
+  }, [meanX, meanY, xDomain, yDomain, invertX, invertY]);
+
   const config = { xLabel, yLabel, xFormat, yFormat };
 
   if (chartData.length === 0) {
@@ -194,6 +212,17 @@ function InsightScatterChart({
             tickFormatter={yFormat || (v => v.toFixed(1))}
           />
           <Tooltip content={<ChartTooltip config={config} />} />
+          {/* Green highlight for "best" quadrant (top-right) */}
+          {showMeanLines && (
+            <ReferenceArea
+              x1={bestQuadrant.x1}
+              x2={bestQuadrant.x2}
+              y1={bestQuadrant.y1}
+              y2={bestQuadrant.y2}
+              fill="#22c55e"
+              fillOpacity={0.08}
+            />
+          )}
           {showMeanLines && (
             <>
               <ReferenceLine x={meanX} stroke={refLineColor} strokeDasharray="5 5" strokeWidth={1} />
