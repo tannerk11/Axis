@@ -213,8 +213,8 @@ function Players({ league, season, conferences }) {
   const fetchAllPlayers = useCallback(async () => {
     setVizLoading(true);
     try {
-      // Fetch more players for visualizations (top 500 by PPG)
-      const url = `${API_URL}/api/players?league=${league}&season=${season}&sort_by=pts_pg&sort_order=DESC&limit=500&min_gp=5`;
+      // Fetch all players for visualizations (no limit)
+      const url = `${API_URL}/api/players?league=${league}&season=${season}&sort_by=pts_pg&sort_order=DESC&limit=10000&min_gp=0`;
       const response = await fetch(url);
       const data = await response.json();
       setAllPlayers(data.players || []);
@@ -252,7 +252,8 @@ function Players({ league, season, conferences }) {
     
     return allPlayers.filter(player => {
       // Conference filter
-      if (filters.conference && player.conf !== filters.conference) {
+      // Conference filter
+      if (filters.conference && player.conference !== filters.conference) {
         return false;
       }
       // Team filter
