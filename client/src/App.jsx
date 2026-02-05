@@ -6,6 +6,7 @@ import StatGroupTabs from './components/StatGroupTabs';
 import ViewToggle from './components/ViewToggle';
 import TeamsTable from './components/TeamsTable';
 import TeamModal from './components/TeamModal';
+import ConferenceModal from './components/ConferenceModal';
 import Bracketcast from './components/Bracketcast';
 import Insights from './components/Insights';
 import Scout from './components/Scout';
@@ -48,6 +49,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [selectedConference, setSelectedConference] = useState(null);
   const [hasPlayers, setHasPlayers] = useState(false);
 
   // Helper to update URL params
@@ -182,6 +184,14 @@ function App() {
     setSelectedTeam(null);
   };
 
+  const handleConferenceClick = (conferenceName) => {
+    setSelectedConference(conferenceName);
+  };
+
+  const handleCloseConferenceModal = () => {
+    setSelectedConference(null);
+  };
+
   const handleFilterChange = (key, value) => {
     updateParams({ [key]: value });
   };
@@ -221,6 +231,7 @@ function App() {
             teams={teams}
             loading={loading}
             onTeamClick={handleTeamClick}
+            onConferenceClick={handleConferenceClick}
             statGroup={statGroup}
             league={league}
             season={season}
@@ -298,6 +309,15 @@ function App() {
           onClose={handleCloseModal}
           league={league}
           season={season}
+        />
+      )}
+      {selectedConference && (
+        <ConferenceModal
+          conferenceName={selectedConference}
+          league={league}
+          season={season}
+          onClose={handleCloseConferenceModal}
+          onTeamClick={handleTeamClick}
         />
       )}
     </div>

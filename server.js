@@ -569,7 +569,8 @@ app.get('/api/teams', async (req, res) => {
         // Compute QWI and Power Index for each team
         teams = teams.map(team => {
           const qr = quadrantRecords[team.team_id];
-          if (!qr) return { ...team, qwi: null, power_index: null };
+          const rpiRank = rpiRanks[team.team_id] || null;
+          if (!qr) return { ...team, qwi: null, power_index: null, rpi_rank: rpiRank };
 
           const qwi = (qr.q1_wins * 1.0) - (qr.q1_losses * 0.25)
                     + (qr.q2_wins * 0.6) - (qr.q2_losses * 0.5)
@@ -595,6 +596,7 @@ app.get('/api/teams', async (req, res) => {
             ...team,
             qwi: Math.round(qwi * 100) / 100,
             power_index,
+            rpi_rank: rpiRank,
           };
         });
       } catch (qErr) {
@@ -613,6 +615,39 @@ app.get('/api/teams', async (req, res) => {
     } catch (champErr) {
       console.error('Error getting conference champions:', champErr);
       // Continue without champion flags
+    }
+
+    // Add conference records
+    try {
+      const confGamesResult = await pool.query(`
+        SELECT g.team_id,
+               SUM(CASE WHEN g.team_score > g.opponent_score THEN 1 ELSE 0 END) as conf_wins,
+               SUM(CASE WHEN g.team_score < g.opponent_score THEN 1 ELSE 0 END) as conf_losses
+        FROM games g
+        JOIN teams t ON g.team_id = t.team_id
+        WHERE t.league = $1
+          AND g.season = $2
+          AND g.is_conference = TRUE
+          AND g.is_completed = TRUE
+        GROUP BY g.team_id
+      `, [league, season]);
+
+      const confRecords = {};
+      confGamesResult.rows.forEach(row => {
+        confRecords[row.team_id] = {
+          conf_wins: parseInt(row.conf_wins) || 0,
+          conf_losses: parseInt(row.conf_losses) || 0,
+        };
+      });
+
+      teams = teams.map(team => ({
+        ...team,
+        conf_wins: confRecords[team.team_id]?.conf_wins || 0,
+        conf_losses: confRecords[team.team_id]?.conf_losses || 0,
+      }));
+    } catch (confErr) {
+      console.error('Error getting conference records:', confErr);
+      // Continue without conference records
     }
 
     res.json(teams);
@@ -1399,6 +1434,117 @@ app.get('/api/teams/:teamId/roster', async (req, res) => {
 // ========================================
 // END PLAYER ENDPOINTS
 // ========================================
+
+// Get conference games for a specific date
+app.get('/api/conferences/:conference/games', async (req, res) => {
+  try {
+    const { conference } = req.params;
+    const { league = 'mens', season = DEFAULT_SEASON, date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ error: 'Date parameter is required' });
+    }
+
+    // Get all teams in this conference
+    const teamsResult = await pool.query(`
+      SELECT team_id, name, logo_url
+      FROM teams
+      WHERE conference = $1 AND league = $2 AND season = $3 AND is_excluded = FALSE
+    `, [decodeURIComponent(conference), league, season]);
+
+    const teamIds = teamsResult.rows.map(t => t.team_id);
+    const teamsMap = {};
+    teamsResult.rows.forEach(t => {
+      teamsMap[t.team_id] = { name: t.name, logo_url: t.logo_url };
+    });
+
+    if (teamIds.length === 0) {
+      return res.json({ games: [] });
+    }
+
+    // Get games for these teams on the specified date
+    const gamesResult = await pool.query(`
+      SELECT
+        g.game_id,
+        g.team_id,
+        g.opponent_id,
+        g.opponent_name,
+        g.game_date,
+        g.location,
+        g.team_score,
+        g.opponent_score,
+        g.is_completed,
+        g.is_conference,
+        g.is_naia_game,
+        t_home.name as team_name,
+        t_home.logo_url as team_logo_url,
+        t_opp.name as opponent_team_name,
+        t_opp.logo_url as opponent_logo_url,
+        t_opp.conference as opponent_conference
+      FROM games g
+      JOIN teams t_home ON g.team_id = t_home.team_id AND t_home.season = $3
+      LEFT JOIN teams t_opp ON g.opponent_id = t_opp.team_id AND t_opp.season = $3
+      WHERE g.team_id = ANY($1)
+        AND g.season = $3
+        AND DATE(g.game_date) = $2::date
+      ORDER BY g.game_date ASC, t_home.name ASC
+    `, [teamIds, date, season]);
+
+    // Deduplicate games (each game appears twice - once for each team)
+    // Keep only one record per matchup
+    const seenMatchups = new Set();
+    const games = [];
+
+    gamesResult.rows.forEach(game => {
+      // Create a unique key for the matchup (sorted team IDs)
+      const ids = [game.team_id, game.opponent_id].filter(Boolean).sort();
+      const matchupKey = `${ids[0]}-${ids[1]}-${game.game_date}`;
+
+      if (!seenMatchups.has(matchupKey)) {
+        seenMatchups.add(matchupKey);
+
+        // Determine if this is a conference game between two conference teams
+        const isConferenceMatchup = teamIds.includes(game.opponent_id);
+
+        games.push({
+          game_id: game.game_id,
+          date: game.game_date,
+          home_team: game.location === 'home' ? {
+            team_id: game.team_id,
+            name: game.team_name,
+            logo_url: game.team_logo_url,
+            score: game.team_score,
+          } : {
+            team_id: game.opponent_id,
+            name: game.opponent_team_name || game.opponent_name,
+            logo_url: game.opponent_logo_url,
+            score: game.opponent_score,
+          },
+          away_team: game.location === 'away' ? {
+            team_id: game.team_id,
+            name: game.team_name,
+            logo_url: game.team_logo_url,
+            score: game.team_score,
+          } : {
+            team_id: game.opponent_id,
+            name: game.opponent_team_name || game.opponent_name,
+            logo_url: game.opponent_logo_url,
+            score: game.opponent_score,
+          },
+          location: game.location,
+          is_completed: game.is_completed,
+          is_conference_matchup: isConferenceMatchup,
+          opponent_conference: game.opponent_conference,
+        });
+      }
+    });
+
+    res.json({ games });
+  } catch (err) {
+    console.error('Error fetching conference games:', err);
+    res.status(500).json({ error: 'Failed to fetch conference games' });
+  }
+});
 
 // Conference to Area mapping based on NAIA Selection Committee Policy
 const CONFERENCE_AREAS = {

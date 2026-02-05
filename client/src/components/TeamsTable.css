@@ -200,6 +200,16 @@
   line-height: 120%;
 }
 
+.team-conference-clickable {
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.team-conference-clickable:hover {
+  color: var(--color-accent-primary);
+  text-decoration: underline;
+}
+
 /* Sub-ranking display */
 .stat-value {
   display: inline;

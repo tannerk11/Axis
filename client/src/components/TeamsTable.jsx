@@ -150,7 +150,7 @@ const STAT_GROUPS = {
   },
 };
 
-function TeamsTable({ teams, loading, statGroup = 'Overview', onTeamClick }) {
+function TeamsTable({ teams, loading, statGroup = 'Overview', onTeamClick, onConferenceClick }) {
   const groupConfig = STAT_GROUPS[statGroup] || STAT_GROUPS.Overview;
   const { columns, defaultSort } = groupConfig;
 
@@ -401,7 +401,17 @@ function TeamsTable({ teams, loading, statGroup = 'Overview', onTeamClick }) {
                         {team.name}
                         {team.is_conference_champion && <span className="champion-badge" title="Conference Champion (Auto-Bid)">🏆</span>}
                       </span>
-                      <span className="team-conference">{team.conference || ''}</span>
+                      <span
+                        className="team-conference team-conference-clickable"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onConferenceClick && team.conference) {
+                            onConferenceClick(team.conference);
+                          }
+                        }}
+                      >
+                        {team.conference || ''}
+                      </span>
                     </div>
                   </div>
                 </td>
