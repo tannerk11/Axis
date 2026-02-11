@@ -35,7 +35,7 @@ function getPercentile(value, allValues, higherIsBetter = true) {
 
 const formatDate = (dateStr) => {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 };
 
 function Matchup({ league, season, teams = [], conferences = [] }) {

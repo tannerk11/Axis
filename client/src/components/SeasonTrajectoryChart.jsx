@@ -52,7 +52,7 @@ function SeasonTrajectoryChart({ schedule, teamName }) {
 
       // Format date for display
       const gameDate = new Date(game.date);
-      const dateLabel = gameDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dateLabel = gameDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
       return {
         gameNum: index + 1,

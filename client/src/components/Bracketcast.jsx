@@ -195,6 +195,7 @@ function Bracketcast({ league, season, onTeamClick }) {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: 'UTC',
     });
   }, [data.asOfDate]);
 

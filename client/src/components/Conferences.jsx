@@ -553,7 +553,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   };
 
   const BarTooltip = ({ active, payload }) => {

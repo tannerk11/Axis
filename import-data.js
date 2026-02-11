@@ -214,18 +214,33 @@ function extractGames(json, teamId) {
     // Parse date - use eventDateFormatted (e.g., "Feb 6") to avoid timezone issues
     // The timestamp in event.date is UTC and can shift to the next day for evening games
     // NOTE: eventDateFormatted is on eventData, not on event!
+    //
+    // Derive year from the SEASON string, not from the timestamp.
+    // Season "2025-26" means Aug-Dec = 2025, Jan-Jul = 2026.
+    // This avoids bugs where a late-night game's UTC timestamp crosses
+    // into the next calendar year (e.g., Dec 31 at 8pm ET = Jan 1 UTC).
+    const seasonYears = SEASON.split('-');
+    const seasonStartYear = parseInt(seasonYears[0]);           // e.g., 2025
+    const seasonEndYear = seasonStartYear + 1;                  // e.g., 2026
+
     let gameDate;
     if (eventData.eventDateFormatted) {
-      // eventDateFormatted is like "Feb 6" or "Jan 31" - add year from timestamp
-      const timestampDate = new Date(event.date);
-      const year = timestampDate.getFullYear();
+      // eventDateFormatted is like "Feb 6" or "Jan 31" - determine year from month
+      const monthMap = { Jan:0, Feb:1, Mar:2, Apr:3, May:4, Jun:5, Jul:6, Aug:7, Sep:8, Oct:9, Nov:10, Dec:11 };
+      const monthAbbr = eventData.eventDateFormatted.split(' ')[0];
+      const monthNum = monthMap[monthAbbr];
+      // Months Aug(7)-Dec(11) belong to the start year; Jan(0)-Jul(6) to the end year
+      const year = (monthNum !== undefined && monthNum >= 7) ? seasonStartYear : seasonEndYear;
       gameDate = new Date(`${eventData.eventDateFormatted}, ${year}`);
-      // Handle year boundary (Dec games showing as next year, Jan games as prev year)
       if (isNaN(gameDate.getTime())) {
-        gameDate = timestampDate; // Fallback to timestamp if parsing fails
+        // Fallback: use UTC date from timestamp
+        const ts = new Date(event.date);
+        gameDate = new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()));
       }
     } else {
-      gameDate = new Date(event.date);
+      // No formatted date available - use UTC date from timestamp to avoid local TZ shift
+      const ts = new Date(event.date);
+      gameDate = new Date(Date.UTC(ts.getUTCFullYear(), ts.getUTCMonth(), ts.getUTCDate()));
     }
     
     // Extract all box score stats (only if game has been played)

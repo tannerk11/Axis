@@ -420,7 +420,7 @@ function Scout({ league, season, teams = [], conferences = [] }) {
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   };
 
   // Sort teams alphabetically for dropdown, filtered by conference
