@@ -44,7 +44,11 @@
       "Bash(brew:*)",
       "Bash(fnm list:*)",
       "Bash(volta list:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(git config:*)",
+      "Bash(~/bin/gh auth login:*)",
+      "Bash(nvm install:*)",
+      "Bash(nvm use:*)"
     ]
   }
 }

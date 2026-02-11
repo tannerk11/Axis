@@ -11,6 +11,7 @@ import Bracketcast from './components/Bracketcast';
 import Insights from './components/Insights';
 import Scout from './components/Scout';
 import Players from './components/Players';
+import Conferences from './components/Conferences';
 import './App.css';
 
 // In production, API is served from same origin (empty string)
@@ -89,6 +90,7 @@ function App() {
   // Determine current page from pathname
   const getCurrentPage = () => {
     const path = location.pathname;
+    if (path.startsWith('/conferences')) return 'conferences';
     if (path.startsWith('/bracketcast')) return 'bracketcast';
     if (path.startsWith('/scout')) return 'scout';
     if (path.startsWith('/players')) return 'players';
@@ -270,6 +272,17 @@ function App() {
           <Route path="/" element={<TeamsPage />} />
           <Route path="/teams" element={<Navigate to="/" replace />} />
           <Route path="/insights" element={<Navigate to="/?view=visualizations" replace />} />
+          <Route
+            path="/conferences"
+            element={
+              <Conferences
+                league={league}
+                season={season}
+                conferences={conferences}
+                teams={teams}
+              />
+            }
+          />
           <Route
             path="/bracketcast"
             element={

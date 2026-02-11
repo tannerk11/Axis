@@ -1,0 +1,934 @@
+.conferences-page {
+  padding-bottom: 24px;
+}
+
+.conferences-page .page-header {
+  padding: 24px 24px 0;
+}
+
+.conferences-page .page-subtitle {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* ===== Tab Navigation ===== */
+.conf-tabs {
+  display: flex;
+  gap: 0;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid var(--color-border-primary);
+}
+
+.conf-tab {
+  padding: 10px 20px;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.conf-tab:hover {
+  color: var(--color-text-secondary);
+}
+
+.conf-tab-active {
+  color: var(--color-text-primary);
+  border-bottom-color: var(--color-text-primary);
+}
+
+/* Conference Selector */
+.conf-selector {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 20px 24px;
+  background-color: var(--color-bg-primary);
+  flex-wrap: wrap;
+}
+
+.conf-selector .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.conf-selector .filter-group label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.conf-selector .filter-group select {
+  padding: 10px 36px 10px 12px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 4px;
+  background-color: var(--color-bg-secondary);
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  min-width: 280px;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.conf-selector .filter-group select:hover {
+  border-color: var(--color-text-tertiary);
+}
+
+/* Empty State */
+.conf-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  margin: 0 24px;
+  background-color: var(--color-bg-secondary);
+  border-radius: 12px;
+  border: 2px dashed var(--color-border-primary);
+}
+
+.conf-empty-state .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.conf-empty-state p {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+}
+
+/* ===== Conference Power Rankings Table ===== */
+
+.conf-rankings-subtitle {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  margin: -8px 0 16px 0;
+}
+
+.conf-rankings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.conf-rankings-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--color-border-primary);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.conf-rankings-table th:hover {
+  color: var(--color-text-primary);
+}
+
+.conf-rankings-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.conf-rankings-table .col-rank {
+  width: 40px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+.conf-rankings-table .col-rank-conf-name {
+  font-family: var(--font-body);
+  font-weight: 600;
+  min-width: 180px;
+}
+
+.conf-rankings-table .mono-cell {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.conf-ranking-row {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.conf-ranking-row:hover {
+  background-color: var(--color-bg-tertiary);
+}
+
+.conf-ranking-row:hover .col-rank-conf-name {
+  color: var(--color-chart-line);
+  text-decoration: underline;
+}
+
+/* Conference Rankings - Color Scale */
+.conf-rankings-table .rank-hot {
+  background-color: var(--color-data-hot-bg);
+}
+
+.conf-rankings-table .rank-warm {
+  background-color: var(--color-data-warm-bg);
+}
+
+.conf-rankings-table .rank-cold {
+  background-color: var(--color-data-cold-bg);
+}
+
+.conf-rankings-table .rank-cool {
+  background-color: var(--color-data-cool-bg);
+}
+
+/* ===== Bar Chart ===== */
+.conf-bar-chart-wrapper {
+  margin: 0 -12px;
+  overflow: hidden;
+}
+
+.conf-bar-chart-vertical {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ===== Scatter Chart ===== */
+.conf-scatter-chart-wrapper {
+  margin: 8px -8px 0;
+}
+
+/* ===== RPI Strip Chart ===== */
+.conf-rpi-strip-wrapper {
+  margin: 8px -8px 0;
+}
+
+/* ===== Week Navigation ===== */
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 0;
+  margin-bottom: 8px;
+}
+
+.week-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 8px;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 22px;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1;
+}
+
+.week-nav-btn:hover:not(:disabled) {
+  background-color: var(--color-bg-tertiary);
+  border-color: var(--color-text-tertiary);
+}
+
+.week-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.week-nav-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.week-nav-label {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  min-width: 180px;
+  text-align: center;
+}
+
+.week-nav-today {
+  padding: 4px 10px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 4px;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.week-nav-today:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+  border-color: var(--color-text-tertiary);
+}
+
+/* Loading */
+.conf-loading,
+.conf-no-data {
+  padding: 40px 24px;
+  text-align: center;
+  font-family: var(--font-heading);
+  font-size: 15px;
+  color: var(--color-text-tertiary);
+}
+
+/* Content Layout */
+.conf-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px 24px 0;
+}
+
+/* ===== Header Card ===== */
+.conf-header-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  background-color: var(--color-bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-primary);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.conf-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.conf-header-name {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.conf-header-meta {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+}
+
+.conf-header-stats {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.conf-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.conf-stat-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.conf-stat-value {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+/* ===== Conference Strength Cards ===== */
+.conf-strength-section {
+  background-color: var(--color-bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-primary);
+  padding: 20px 24px;
+}
+
+.conf-section-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0 0 16px 0;
+}
+
+.conf-strength-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.strength-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  background-color: var(--color-bg-primary);
+  border-radius: 8px;
+  border: 1px solid var(--color-border-primary);
+}
+
+.strength-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.strength-value {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.strength-detail {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+/* ===== Charts Row ===== */
+.conf-charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.conf-radar-container,
+.conf-scatter-container {
+  background-color: var(--color-bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-primary);
+  padding: 20px;
+  min-width: 0;
+}
+
+.conf-radar-header,
+.conf-scatter-header {
+  margin-bottom: 8px;
+}
+
+.conf-radar-header h3,
+.conf-scatter-header h3 {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.conf-radar-subtitle,
+.conf-scatter-subtitle {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.conf-radar-chart-wrapper {
+  margin: 0 -10px;
+}
+
+.conf-profile-chart-wrapper {
+  margin: 4px -8px 0;
+}
+
+/* Chart tooltip */
+.conf-radar-tooltip {
+  background-color: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.conf-radar-tooltip .tooltip-label {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--color-text-primary);
+  margin: 0 0 6px 0;
+}
+
+.conf-radar-tooltip .tooltip-conf,
+.conf-radar-tooltip .tooltip-nat {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 2px 0;
+}
+
+/* ===== Conference Sections ===== */
+.conf-section {
+  background-color: var(--color-bg-secondary);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-primary);
+  padding: 20px 24px;
+}
+
+.conf-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.conf-section-header .conf-section-title {
+  margin-bottom: 0;
+}
+
+/* ===== Standings Table ===== */
+.conf-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.conf-standings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.conf-standings-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--color-border-primary);
+  white-space: nowrap;
+}
+
+.conf-standings-table th.col-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.conf-standings-table th.col-sortable:hover {
+  color: var(--color-text-primary);
+}
+
+.conf-standings-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.conf-standings-table .col-rank {
+  width: 40px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-heading);
+}
+
+.conf-standings-table .col-team {
+  min-width: 180px;
+}
+
+.conf-standings-table .team-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.conf-standings-table .team-name-clickable {
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-weight: 500;
+}
+
+.conf-standings-table .team-name-clickable:hover {
+  text-decoration: underline;
+  color: var(--color-text-primary);
+}
+
+.conf-standings-table .champion-badge {
+  margin-left: 6px;
+  font-size: 14px;
+}
+
+.conf-standings-table .col-conf-record {
+  font-weight: 600;
+}
+
+.conf-standings-table .conference-champion-row td {
+  background-color: rgba(217, 169, 56, 0.08);
+}
+
+/* ===== Head-to-Head Matrix ===== */
+.h2h-table-container {
+  max-width: 100%;
+}
+
+.h2h-matrix-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  width: auto;
+  min-width: 100%;
+}
+
+.h2h-matrix-table th,
+.h2h-matrix-table td {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-secondary);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.h2h-corner {
+  min-width: 160px;
+}
+
+.h2h-col-header {
+  min-width: 50px;
+}
+
+.h2h-col-header .team-logo {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+}
+
+.h2h-col-header .team-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.h2h-row-header {
+  text-align: left !important;
+  min-width: 160px;
+}
+
+.h2h-team-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.h2h-team-cell .team-logo {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.h2h-team-cell .team-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.h2h-team-name {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.h2h-cell {
+  min-width: 50px;
+}
+
+.h2h-self {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-tertiary);
+}
+
+.h2h-unplayed {
+  color: var(--color-text-tertiary);
+}
+
+.h2h-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.h2h-result + .h2h-result {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-border-secondary);
+}
+
+.h2h-win {
+  color: var(--color-win-text);
+}
+
+.h2h-loss {
+  color: var(--color-loss-text);
+}
+
+.h2h-wl {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.h2h-score {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+}
+
+/* ===== Schedule ===== */
+.conf-schedule-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.schedule-filter-select {
+  padding: 6px 28px 6px 10px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 4px;
+  background-color: var(--color-bg-primary);
+  font-size: 13px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+
+.conf-schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.conf-schedule-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--color-border-primary);
+  white-space: nowrap;
+}
+
+.conf-schedule-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border-secondary);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+.conf-schedule-table .upcoming-game {
+  opacity: 0.7;
+}
+
+.sched-date {
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.sched-team-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.sched-team-info .team-logo {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.sched-team-info .team-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sched-score {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.sched-score-display {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.score-winner {
+  font-weight: 700;
+}
+
+.score-separator {
+  margin: 0 4px;
+  color: var(--color-text-tertiary);
+}
+
+.sched-vs {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.status-final {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.status-upcoming {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  text-transform: uppercase;
+}
+
+/* ===== Responsive ===== */
+
+/* Tablet */
+@media (max-width: 768px) {
+  .conferences-page .page-header {
+    padding: 16px 16px 0;
+  }
+
+  .conf-tabs {
+    padding: 16px 16px 0;
+  }
+
+  .conf-content {
+    padding: 20px 16px 0;
+  }
+
+  .conf-selector {
+    padding: 20px 16px;
+  }
+
+  .conf-charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  .conf-header-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .conf-header-stats {
+    gap: 16px;
+  }
+
+  .conf-strength-cards {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
+
+  .conf-schedule-filters {
+    flex-wrap: wrap;
+  }
+
+  .week-nav-label {
+    font-size: 13px;
+    min-width: 150px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .conferences-page .page-header {
+    padding: 12px 12px 0;
+  }
+
+  .conf-tabs {
+    padding: 12px 12px 0;
+  }
+
+  .conf-content {
+    padding: 16px 12px 0;
+  }
+
+  .conf-selector {
+    padding: 16px 12px;
+  }
+
+  .conf-header-stats {
+    gap: 12px;
+  }
+
+  .conf-stat {
+    min-width: 0;
+  }
+
+  .conf-stat-value {
+    font-size: 15px;
+  }
+
+  .strength-card {
+    padding: 12px 8px;
+  }
+
+  .strength-value {
+    font-size: 16px;
+  }
+
+  .h2h-team-name {
+    display: none;
+  }
+
+  .h2h-row-header {
+    min-width: auto;
+  }
+
+  .week-nav {
+    gap: 8px;
+  }
+
+  .week-nav-label {
+    font-size: 12px;
+    min-width: 130px;
+  }
+}

@@ -103,6 +103,7 @@ function Header({ league, onLeagueChange, activePage, onPageChange, season, seas
             >
               <option value="teams">Teams</option>
               {hasPlayers && <option value="players">Players</option>}
+              <option value="conferences">Conferences</option>
               <option value="bracketcast">Bracketcast</option>
               <option value="scout">Scout</option>
             </select>
@@ -124,6 +125,12 @@ function Header({ league, onLeagueChange, activePage, onPageChange, season, seas
               Players
             </button>
           )}
+          <button
+            className={`nav-button ${activePage === 'conferences' ? 'active' : ''}`}
+            onClick={() => onPageChange('conferences')}
+          >
+            Conferences
+          </button>
           <button
             className={`nav-button ${activePage === 'bracketcast' ? 'active' : ''}`}
             onClick={() => onPageChange('bracketcast')}
