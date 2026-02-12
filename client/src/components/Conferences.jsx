@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ScatterChart, Scatter, ZAxis, ReferenceLine,
 } from 'recharts';
 import InsightScatterChart from './InsightScatterChart';
 import TeamLogo from './TeamLogo';
@@ -87,6 +88,8 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
   const [scheduleGames, setScheduleGames] = useState([]);
   const [loading, setLoading] = useState(false);
   const [rankingsLoading, setRankingsLoading] = useState(false);
+  const [netScatterData, setNetScatterData] = useState([]);
+  const [netScatterLoading, setNetScatterLoading] = useState(false);
 
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleTeamFilter, setScheduleTeamFilter] = useState('all');
@@ -132,6 +135,23 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
       }
     };
     fetchRankings();
+  }, [league, season]);
+
+  // Fetch Adj NET scatter data (all teams with Adj NET rank by conference)
+  useEffect(() => {
+    const fetchNetScatter = async () => {
+      setNetScatterLoading(true);
+      try {
+        const res = await fetch(`${API_URL}/api/conference-rpi-scatter?league=${league}&season=${season}`);
+        const data = await res.json();
+        setNetScatterData(data);
+      } catch (error) {
+        console.error('Error fetching scatter data:', error);
+      } finally {
+        setNetScatterLoading(false);
+      }
+    };
+    fetchNetScatter();
   }, [league, season]);
 
   // Fetch conference data when selection changes
@@ -345,6 +365,37 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
       .map((c, idx) => ({ ...c, topHalfRank: idx + 1 }));
   }, [confRankings]);
 
+  // Adj NET strip chart: teams grouped by conference, conferences ordered by avg Adj NET rank
+  const netStripData = useMemo(() => {
+    if (netScatterData.length === 0 || confRankings.length === 0) return { conferences: [], teams: [] };
+
+    const confOrder = confRankings.map(c => c.conference);
+
+    const confAbbrevMap = {};
+    confOrder.forEach(name => {
+      const words = name.split(/\s+/).filter(w => !['of', 'the', 'for', 'and'].includes(w.toLowerCase()));
+      const abbrev = words.map(w => w[0]).join('').toUpperCase();
+      confAbbrevMap[name] = abbrev.length > 5 ? abbrev.substring(0, 5) : abbrev;
+    });
+
+    const teamPoints = netScatterData.map(team => {
+      const confIdx = confOrder.indexOf(team.conference);
+      return { ...team, confIdx, confAbbrev: confAbbrevMap[team.conference] || '?' };
+    }).filter(t => t.confIdx !== -1);
+
+    return {
+      conferences: confOrder.map((name, idx) => ({
+        name,
+        abbrev: confAbbrevMap[name],
+        idx,
+        avgNetRank: confRankings[idx]?.adj_net_rank,
+      })),
+      teams: teamPoints,
+      minNet: Math.min(...teamPoints.map(t => t.adj_net)),
+      maxNet: Math.max(...teamPoints.map(t => t.adj_net)),
+    };
+  }, [netScatterData, confRankings]);
+
   // Head-to-head matrix sorted teams
   const h2hTeams = useMemo(() => {
     if (!headToHead?.teams) return [];
@@ -451,6 +502,20 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
               {entry.name}: {fmt(entry.value)}
             </p>
           ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const NetStripTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="conf-radar-tooltip">
+          <p className="tooltip-label">{data.name}</p>
+          <p className="tooltip-conf">{data.conference}</p>
+          <p className="tooltip-nat">Adj NET: {data.adj_net?.toFixed(2)}</p>
         </div>
       );
     }
@@ -598,6 +663,76 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
               </div>
             </section>
           )}
+
+          {/* Adj NET Rankings by Conference Strip Chart */}
+          <section className="conf-section">
+            <div className="conf-scatter-header">
+              <h3>Adj NET Rating by Conference</h3>
+              <span className="conf-scatter-subtitle">Each dot is a team. Conferences ordered by average Adj NET rating (best to worst, left to right).</span>
+            </div>
+            {netScatterLoading ? (
+              <div className="conf-loading">Loading...</div>
+            ) : netStripData.conferences.length > 0 && (
+              <div className="conf-rpi-strip-wrapper">
+                <ResponsiveContainer width="100%" height={500}>
+                  <ScatterChart margin={{ top: 20, right: 20, bottom: 80, left: 50 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-secondary)" vertical={false} />
+                    <XAxis
+                      type="number"
+                      dataKey="confIdx"
+                      domain={[-0.5, netStripData.conferences.length - 0.5]}
+                      ticks={netStripData.conferences.map((_, i) => i)}
+                      tickFormatter={(idx) => netStripData.conferences[idx]?.abbrev || ''}
+                      tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10 }}
+                      tickLine={false}
+                      axisLine={{ stroke: 'var(--color-border-secondary)' }}
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                    />
+                    <YAxis
+                      type="number"
+                      dataKey="adj_net"
+                      domain={[Math.min(0, Math.floor(netStripData.minNet - 2)), Math.ceil(netStripData.maxNet + 2)]}
+                      tickFormatter={(v) => v.toFixed(0)}
+                      tick={{ fill: 'var(--color-text-tertiary)', fontSize: 11 }}
+                      tickLine={false}
+                      axisLine={false}
+                      label={{ value: 'Adj NET Rating', angle: -90, position: 'insideLeft', offset: -35, fill: 'var(--color-text-tertiary)', fontSize: 12 }}
+                    />
+                    <ReferenceLine y={0} stroke="var(--color-border-primary)" strokeDasharray="4 4" />
+                    <ZAxis range={[20, 20]} />
+                    <Tooltip content={<NetStripTooltip />} />
+                    <Scatter
+                      data={netStripData.teams}
+                      cursor="pointer"
+                      onClick={(data) => {
+                        if (data?.conference) {
+                          handleConferenceChange(data.conference);
+                          setActiveTab('detail');
+                        }
+                      }}
+                      shape={(props) => {
+                        const { cx, cy, payload } = props;
+                        const isPositive = payload.adj_net >= 0;
+                        return (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={4}
+                            fill={isPositive ? 'var(--color-chart-line)' : 'var(--color-text-tertiary)'}
+                            fillOpacity={0.7}
+                            stroke={isPositive ? 'var(--color-chart-dot)' : 'var(--color-border-primary)'}
+                            strokeWidth={1}
+                          />
+                        );
+                      }}
+                    />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </section>
         </div>
       )}
 
