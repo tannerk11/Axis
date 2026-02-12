@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo, Component } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import {
   ResponsiveContainer, Tooltip, Legend,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Cell,
-  ScatterChart, Scatter, ZAxis, ReferenceLine,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import InsightScatterChart from './InsightScatterChart';
 import TeamLogo from './TeamLogo';
@@ -88,8 +87,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
   const [scheduleGames, setScheduleGames] = useState([]);
   const [loading, setLoading] = useState(false);
   const [rankingsLoading, setRankingsLoading] = useState(false);
-  const [netScatterData, setNetScatterData] = useState([]);
-  const [netScatterLoading, setNetScatterLoading] = useState(false);
+
   const [scheduleLoading, setScheduleLoading] = useState(false);
   const [scheduleTeamFilter, setScheduleTeamFilter] = useState('all');
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getWeekStart(new Date()));
@@ -97,16 +95,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
   const [sortDirection, setSortDirection] = useState('desc');
   const [rankSortColumn, setRankSortColumn] = useState('adj_net_rank');
   const [rankSortDirection, setRankSortDirection] = useState('asc');
-  const [barMetric, setBarMetric] = useState('avg_adj_net');
 
-  const BAR_METRICS = [
-    { key: 'avg_adj_net', label: 'Avg Adj NET', format: v => v?.toFixed(2) },
-    { key: 'avg_rpi', label: 'Avg RPI', format: v => v?.toFixed(4) },
-    { key: 'avg_adj_ortg', label: 'Avg Adj ORTG', format: v => v?.toFixed(1) },
-    { key: 'avg_adj_drtg', label: 'Avg Adj DRTG', format: v => v?.toFixed(1), lowerBetter: true },
-    { key: 'avg_sos', label: 'Avg SOS', format: v => v?.toFixed(4) },
-    { key: 'non_conf_win_pct', label: 'Non-Conf Win%', format: v => (v * 100).toFixed(1) + '%' },
-  ];
 
   // Sync URL param
   const handleConferenceChange = (conf) => {
@@ -143,23 +132,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
       }
     };
     fetchRankings();
-  }, [league, season]);
-
-  // Fetch Adj NET scatter data (all teams with Adj NET rank by conference)
-  useEffect(() => {
-    const fetchNetScatter = async () => {
-      setNetScatterLoading(true);
-      try {
-        const res = await fetch(`${API_URL}/api/conference-rpi-scatter?league=${league}&season=${season}`);
-        const data = await res.json();
-        setNetScatterData(data);
-      } catch (error) {
-        console.error('Error fetching scatter data:', error);
-      } finally {
-        setNetScatterLoading(false);
-      }
-    };
-    fetchNetScatter();
   }, [league, season]);
 
   // Fetch conference data when selection changes
@@ -373,104 +345,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
       .map((c, idx) => ({ ...c, topHalfRank: idx + 1 }));
   }, [confRankings]);
 
-  // Bar chart data (sorted by selected metric)
-  const barChartData = useMemo(() => {
-    if (confRankings.length === 0) return [];
-    const metricDef = BAR_METRICS.find(m => m.key === barMetric);
-    const sorted = [...confRankings]
-      .filter(c => c[barMetric] != null)
-      .sort((a, b) => {
-        if (metricDef?.lowerBetter) return a[barMetric] - b[barMetric];
-        return b[barMetric] - a[barMetric];
-      });
-    return sorted.map(c => ({
-      name: c.conference.length > 14 ? c.conference.substring(0, 12) + '…' : c.conference,
-      fullName: c.conference,
-      value: c[barMetric],
-      adjNetRank: c.adj_net_rank,
-    }));
-  }, [confRankings, barMetric]);
-
-  // Scatter data: conferences plotted as ORTG vs DRTG
-  const confScatterData = useMemo(() => {
-    return confRankings
-      .filter(c => c.avg_adj_ortg != null && c.avg_adj_drtg != null)
-      .map(c => ({
-        name: c.conference,
-        x: c.avg_adj_ortg,
-        y: c.avg_adj_drtg,
-        teamCount: c.team_count,
-        adjNetRank: c.adj_net_rank,
-      }));
-  }, [confRankings]);
-
-  // Scatter means
-  const confScatterMeans = useMemo(() => {
-    if (confScatterData.length === 0) return { meanX: 0, meanY: 0 };
-    const sumX = confScatterData.reduce((a, d) => a + d.x, 0);
-    const sumY = confScatterData.reduce((a, d) => a + d.y, 0);
-    return {
-      meanX: sumX / confScatterData.length,
-      meanY: sumY / confScatterData.length,
-    };
-  }, [confScatterData]);
-
-  // Scatter axis domains (zoom into actual data range with padding)
-  const confScatterDomains = useMemo(() => {
-    if (confScatterData.length === 0) return { xDomain: [90, 120], yDomain: [90, 120] };
-    const xs = confScatterData.map(d => d.x);
-    const ys = confScatterData.map(d => d.y);
-    const xMin = Math.min(...xs);
-    const xMax = Math.max(...xs);
-    const yMin = Math.min(...ys);
-    const yMax = Math.max(...ys);
-    const xPadding = (xMax - xMin) * 0.15 || 2;
-    const yPadding = (yMax - yMin) * 0.15 || 2;
-    return {
-      xDomain: [Math.floor(xMin - xPadding), Math.ceil(xMax + xPadding)],
-      yDomain: [Math.floor(yMin - yPadding), Math.ceil(yMax + yPadding)],
-    };
-  }, [confScatterData]);
-
-  // Adj NET strip chart: teams grouped by conference, conferences ordered by avg Adj NET rank
-  const netStripData = useMemo(() => {
-    if (netScatterData.length === 0 || confRankings.length === 0) return { conferences: [], teams: [] };
-
-    // Get conference order from confRankings (already sorted by avg Adj NET desc = rank 1 first)
-    const confOrder = confRankings.map(c => c.conference);
-
-    // Build abbreviation map for conference names
-    const confAbbrevMap = {};
-    confOrder.forEach(name => {
-      // Create short abbreviation from initials
-      const words = name.split(/\s+/).filter(w => !['of', 'the', 'for', 'and'].includes(w.toLowerCase()));
-      const abbrev = words.map(w => w[0]).join('').toUpperCase();
-      confAbbrevMap[name] = abbrev.length > 5 ? abbrev.substring(0, 5) : abbrev;
-    });
-
-    // Map each team to an x-index based on its conference order
-    const teamPoints = netScatterData.map(team => {
-      const confIdx = confOrder.indexOf(team.conference);
-      return {
-        ...team,
-        confIdx,
-        confAbbrev: confAbbrevMap[team.conference] || '?',
-      };
-    }).filter(t => t.confIdx !== -1);
-
-    return {
-      conferences: confOrder.map((name, idx) => ({
-        name,
-        abbrev: confAbbrevMap[name],
-        idx,
-        avgNetRank: confRankings[idx]?.adj_net_rank,
-      })),
-      teams: teamPoints,
-      minNet: Math.min(...teamPoints.map(t => t.adj_net)),
-      maxNet: Math.max(...teamPoints.map(t => t.adj_net)),
-    };
-  }, [netScatterData, confRankings]);
-
   // Head-to-head matrix sorted teams
   const h2hTeams = useMemo(() => {
     if (!headToHead?.teams) return [];
@@ -565,21 +439,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
   };
 
-  const BarTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      const metricDef = BAR_METRICS.find(m => m.key === barMetric);
-      return (
-        <div className="conf-radar-tooltip">
-          <p className="tooltip-label">{data.fullName}</p>
-          <p className="tooltip-conf">{metricDef?.label}: {metricDef?.format(data.value)}</p>
-          <p className="tooltip-nat">Adj NET Rank: #{data.adjNetRank}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   const ProfileTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const metricDef = PROFILE_METRICS.find(m => m.label === label);
@@ -592,35 +451,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
               {entry.name}: {fmt(entry.value)}
             </p>
           ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const ScatterTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="conf-radar-tooltip">
-          <p className="tooltip-label">{data.name}</p>
-          <p className="tooltip-conf">Avg ORTG: {data.x?.toFixed(1)}</p>
-          <p className="tooltip-nat">Avg DRTG: {data.y?.toFixed(1)}</p>
-          <p className="tooltip-nat">Adj NET Rank: #{data.adjNetRank} &bull; {data.teamCount} teams</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const NetStripTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="conf-radar-tooltip">
-          <p className="tooltip-label">{data.name}</p>
-          <p className="tooltip-conf">{data.conference}</p>
-          <p className="tooltip-nat">Adj NET: {data.adj_net?.toFixed(2)}</p>
         </div>
       );
     }
@@ -653,221 +483,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
       {/* ===== POWER RANKINGS TAB ===== */}
       {activeTab === 'rankings' && (
         <div className="conf-content">
-          {/* Conference Comparison Bar Chart */}
-          <section className="conf-section">
-            <div className="conf-section-header">
-              <h3 className="conf-section-title">Conference Comparison</h3>
-              <select
-                value={barMetric}
-                onChange={(e) => setBarMetric(e.target.value)}
-                className="schedule-filter-select"
-              >
-                {BAR_METRICS.map(m => (
-                  <option key={m.key} value={m.key}>{m.label}</option>
-                ))}
-              </select>
-            </div>
-            {rankingsLoading ? (
-              <div className="conf-loading">Loading...</div>
-            ) : (
-              <div className="conf-bar-chart-wrapper conf-bar-chart-vertical">
-                <ResponsiveContainer width="100%" height={420}>
-                  <BarChart
-                    data={barChartData}
-                    margin={{ top: 8, right: 16, bottom: 80, left: 16 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-secondary)" vertical={false} />
-                    <XAxis
-                      type="category"
-                      dataKey="name"
-                      tick={{ fill: 'var(--color-text-secondary)', fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={{ stroke: 'var(--color-border-secondary)' }}
-                      interval={0}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis
-                      type="number"
-                      tick={{ fill: 'var(--color-text-tertiary)', fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip content={<BarTooltip />} cursor={{ fill: 'var(--color-bg-tertiary)', opacity: 0.5 }} />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={32}>
-                      {barChartData.map((entry, idx) => (
-                        <Cell
-                          key={entry.fullName}
-                          fill={idx < 3 ? 'var(--color-chart-line)' : 'var(--color-border-primary)'}
-                          fillOpacity={idx < 3 ? 0.85 : 0.5}
-                          cursor="pointer"
-                          onClick={() => {
-                            handleConferenceChange(entry.fullName);
-                            setActiveTab('detail');
-                          }}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </section>
-
-          {/* Conference Scatter: ORTG vs DRTG */}
-          <section className="conf-section">
-            <div className="conf-scatter-header">
-              <h3>Conference Offense vs Defense</h3>
-              <span className="conf-scatter-subtitle">Avg Adj ORTG vs Avg Adj DRTG (lower DRTG = better defense)</span>
-            </div>
-            {confScatterData.length > 0 && (
-              <div className="conf-scatter-chart-wrapper">
-                <ResponsiveContainer width="100%" height={400}>
-                  <ScatterChart margin={{ top: 20, right: 30, bottom: 20, left: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-secondary)" />
-                    <XAxis
-                      type="number"
-                      dataKey="x"
-                      name="Avg ORTG"
-                      domain={confScatterDomains.xDomain}
-                      tick={{ fill: 'var(--color-text-tertiary)', fontSize: 11 }}
-                      tickLine={false}
-                      label={{ value: 'Avg Adj ORTG →', position: 'bottom', offset: 0, fill: 'var(--color-text-tertiary)', fontSize: 12 }}
-                    />
-                    <YAxis
-                      type="number"
-                      dataKey="y"
-                      name="Avg DRTG"
-                      domain={confScatterDomains.yDomain}
-                      reversed
-                      tick={{ fill: 'var(--color-text-tertiary)', fontSize: 11 }}
-                      tickLine={false}
-                      label={{ value: '← Better Defense', position: 'insideTop', offset: -10, fill: 'var(--color-text-tertiary)', fontSize: 12 }}
-                    />
-                    <ZAxis type="number" dataKey="teamCount" range={[80, 250]} />
-                    <ReferenceLine y={confScatterMeans.meanY} stroke="var(--color-border-primary)" strokeDasharray="4 4" />
-                    <ReferenceLine x={confScatterMeans.meanX} stroke="var(--color-border-primary)" strokeDasharray="4 4" />
-                    <Tooltip content={<ScatterTooltip />} />
-                    <Scatter
-                      data={confScatterData}
-                      fill="var(--color-chart-line)"
-                      fillOpacity={0.8}
-                      stroke="var(--color-chart-dot)"
-                      strokeWidth={1}
-                      cursor="pointer"
-                      onClick={(data) => {
-                        if (data?.name) {
-                          handleConferenceChange(data.name);
-                          setActiveTab('detail');
-                        }
-                      }}
-                      shape={(props) => {
-                        const { cx, cy, payload } = props;
-                        const isTop5 = payload.adjNetRank <= 5;
-                        return (
-                          <g>
-                            <circle
-                              cx={cx}
-                              cy={cy}
-                              r={isTop5 ? 8 : 6}
-                              fill={isTop5 ? 'var(--color-chart-line)' : 'var(--color-border-primary)'}
-                              fillOpacity={isTop5 ? 0.9 : 0.6}
-                              stroke={isTop5 ? 'var(--color-chart-dot)' : 'var(--color-text-tertiary)'}
-                              strokeWidth={1.5}
-                            />
-                            {isTop5 && (
-                              <text
-                                x={cx}
-                                y={cy - 12}
-                                textAnchor="middle"
-                                fill="var(--color-text-secondary)"
-                                fontSize={10}
-                                fontWeight={600}
-                              >
-                                {payload.name.length > 14 ? payload.name.substring(0, 12) + '…' : payload.name}
-                              </text>
-                            )}
-                          </g>
-                        );
-                      }}
-                    />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </section>
-
-          {/* Adj NET Rankings by Conference Strip Chart */}
-          <section className="conf-section">
-            <div className="conf-scatter-header">
-              <h3>Adj NET Rating by Conference</h3>
-              <span className="conf-scatter-subtitle">Each dot is a team. Conferences ordered by average Adj NET rating (best to worst, left to right).</span>
-            </div>
-            {netScatterLoading ? (
-              <div className="conf-loading">Loading...</div>
-            ) : netStripData.conferences.length > 0 && (
-              <div className="conf-rpi-strip-wrapper">
-                <ResponsiveContainer width="100%" height={500}>
-                  <ScatterChart margin={{ top: 20, right: 20, bottom: 80, left: 50 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-secondary)" vertical={false} />
-                    <XAxis
-                      type="number"
-                      dataKey="confIdx"
-                      domain={[-0.5, netStripData.conferences.length - 0.5]}
-                      ticks={netStripData.conferences.map((_, i) => i)}
-                      tickFormatter={(idx) => netStripData.conferences[idx]?.abbrev || ''}
-                      tick={{ fill: 'var(--color-text-tertiary)', fontSize: 10 }}
-                      tickLine={false}
-                      axisLine={{ stroke: 'var(--color-border-secondary)' }}
-                      interval={0}
-                      angle={-45}
-                      textAnchor="end"
-                    />
-                    <YAxis
-                      type="number"
-                      dataKey="adj_net"
-                      domain={[Math.min(0, Math.floor(netStripData.minNet - 2)), Math.ceil(netStripData.maxNet + 2)]}
-                      tickFormatter={(v) => v.toFixed(0)}
-                      tick={{ fill: 'var(--color-text-tertiary)', fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      label={{ value: 'Adj NET Rating', angle: -90, position: 'insideLeft', offset: -35, fill: 'var(--color-text-tertiary)', fontSize: 12 }}
-                    />
-                    <ReferenceLine y={0} stroke="var(--color-border-primary)" strokeDasharray="4 4" />
-                    <ZAxis range={[20, 20]} />
-                    <Tooltip content={<NetStripTooltip />} />
-                    <Scatter
-                      data={netStripData.teams}
-                      cursor="pointer"
-                      onClick={(data) => {
-                        if (data?.conference) {
-                          handleConferenceChange(data.conference);
-                          setActiveTab('detail');
-                        }
-                      }}
-                      shape={(props) => {
-                        const { cx, cy, payload } = props;
-                        const isPositive = payload.adj_net >= 0;
-                        return (
-                          <circle
-                            cx={cx}
-                            cy={cy}
-                            r={4}
-                            fill={isPositive ? 'var(--color-chart-line)' : 'var(--color-text-tertiary)'}
-                            fillOpacity={0.7}
-                            stroke={isPositive ? 'var(--color-chart-dot)' : 'var(--color-border-primary)'}
-                            strokeWidth={1}
-                          />
-                        );
-                      }}
-                    />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </section>
-
           {/* Power Rankings Table */}
           <section className="conf-section conf-power-rankings">
             <h3 className="conf-section-title">All Conference Rankings</h3>
