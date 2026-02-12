@@ -242,6 +242,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
         case 'adjusted_defensive_rating': return team.adjusted_defensive_rating || 999;
         case 'strength_of_schedule': return team.strength_of_schedule || 0;
         case 'naia_win_pct': return team.naia_win_pct || 0;
+        case 'proj_conf_wins': return team.proj_conf_wins || 0;
         default: return team.conf_wins || 0;
       }
     };
@@ -1166,11 +1167,14 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
                   <tr>
                     <th className="col-rank">#</th>
                     <th className="col-team">Team</th>
+                    <th className="col-sortable" onClick={() => handleSort('wins')}>
+                      Overall{sortIndicator('wins')}
+                    </th>
                     <th className="col-sortable" onClick={() => handleSort('conf_wins')}>
                       Conf{sortIndicator('conf_wins')}
                     </th>
-                    <th className="col-sortable" onClick={() => handleSort('wins')}>
-                      Overall{sortIndicator('wins')}
+                    <th className="col-sortable" onClick={() => handleSort('proj_conf_wins')}>
+                      Proj Conf{sortIndicator('proj_conf_wins')}
                     </th>
                     <th className="col-sortable" onClick={() => handleSort('rpi_rank')}>
                       RPI Rank{sortIndicator('rpi_rank')}
@@ -1213,10 +1217,13 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
                           </span>
                         </div>
                       </td>
+                      <td>{team.wins || 0}-{team.losses || 0}</td>
                       <td className="col-conf-record">
                         {team.conf_wins || 0}-{team.conf_losses || 0}
                       </td>
-                      <td>{team.wins || 0}-{team.losses || 0}</td>
+                      <td>
+                        {team.proj_conf_wins || 0}-{team.proj_conf_losses || 0}
+                      </td>
                       <td>{team.rpi_rank || '-'}</td>
                       <td>{team.adjusted_net_rating != null ? Number(team.adjusted_net_rating).toFixed(2) : '-'}</td>
                       <td>{team.adjusted_offensive_rating != null ? Number(team.adjusted_offensive_rating).toFixed(1) : '-'}</td>

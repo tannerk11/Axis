@@ -651,6 +651,57 @@ app.get('/api/teams', async (req, res) => {
       // Continue without conference records
     }
 
+    // Add projected conference records (actual + predicted future games)
+    try {
+      // Build ratings lookup from teams array
+      const ratingsMap = {};
+      teams.forEach(t => {
+        ratingsMap[t.team_id] = {
+          adjO: parseFloat(t.adjusted_offensive_rating) || 100,
+          adjD: parseFloat(t.adjusted_defensive_rating) || 100,
+          pace: parseFloat(t.pace) || 70,
+        };
+      });
+
+      // Get all conference games (completed and future)
+      const allConfGames = await pool.query(`
+        SELECT g.team_id, g.opponent_id, g.team_score, g.opponent_score,
+               g.is_completed, g.location
+        FROM games g
+        JOIN teams t ON g.team_id = t.team_id AND t.season = $2
+        WHERE g.season = $2 AND g.is_conference = TRUE AND g.is_naia_game = TRUE
+          AND g.is_exhibition = FALSE AND t.league = $1 AND t.is_excluded = FALSE
+      `, [league, season]);
+
+      const projRecords = {};
+      allConfGames.rows.forEach(g => {
+        if (!projRecords[g.team_id]) projRecords[g.team_id] = { wins: 0, losses: 0 };
+
+        if (g.is_completed && g.team_score != null && g.opponent_score != null) {
+          if (g.team_score > g.opponent_score) projRecords[g.team_id].wins++;
+          else projRecords[g.team_id].losses++;
+        } else if (!g.is_completed && g.opponent_id && ratingsMap[g.team_id] && ratingsMap[g.opponent_id]) {
+          const team = ratingsMap[g.team_id];
+          const opp = ratingsMap[g.opponent_id];
+          const homeAdv = g.location === 'home' ? 3.5 : (g.location === 'away' ? -3.5 : 0);
+          const expectedMarginPer100 = (team.adjO - team.adjD) - (opp.adjO - opp.adjD);
+          const paceFactor = ((team.pace + opp.pace) / 2) / 100;
+          const predictedMargin = expectedMarginPer100 * paceFactor + homeAdv;
+          if (predictedMargin > 0) projRecords[g.team_id].wins++;
+          else projRecords[g.team_id].losses++;
+        }
+      });
+
+      teams = teams.map(team => ({
+        ...team,
+        proj_conf_wins: projRecords[team.team_id]?.wins || 0,
+        proj_conf_losses: projRecords[team.team_id]?.losses || 0,
+      }));
+    } catch (projErr) {
+      console.error('Error computing projected conference records:', projErr);
+      // Continue without projected records
+    }
+
     res.json(teams);
   } catch (err) {
     console.error('Error fetching teams:', err);
