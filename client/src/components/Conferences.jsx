@@ -106,7 +106,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
     { key: 'avg_adj_drtg', label: 'Avg Adj DRTG', format: v => v?.toFixed(1), lowerBetter: true },
     { key: 'avg_sos', label: 'Avg SOS', format: v => v?.toFixed(4) },
     { key: 'non_conf_win_pct', label: 'Non-Conf Win%', format: v => (v * 100).toFixed(1) + '%' },
-    { key: 'top_half_adj_net', label: 'Top-Half NET', format: v => v?.toFixed(2) },
   ];
 
   // Sync URL param
@@ -352,7 +351,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
           case 'avg_sos': return row.avg_sos || 0;
           case 'best_rpi_rank': return row.best_rpi_rank || 999;
           case 'non_conf_win_pct': return row.non_conf_win_pct || 0;
-          case 'top_half_adj_net': return row.top_half_adj_net ?? -999;
           default: return row.adj_net_rank || 999;
         }
       };
@@ -365,6 +363,14 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
     });
     return sorted;
   }, [confRankings, rankSortColumn, rankSortDirection]);
+
+  // Top-Half NET rankings: conferences sorted by avg adj net of teams projected .500+ in conf play
+  const topHalfRankings = useMemo(() => {
+    return [...confRankings]
+      .filter(c => c.top_half_adj_net != null)
+      .sort((a, b) => b.top_half_adj_net - a.top_half_adj_net)
+      .map((c, idx) => ({ ...c, topHalfRank: idx + 1 }));
+  }, [confRankings]);
 
   // Bar chart data (sorted by selected metric)
   const barChartData = useMemo(() => {
@@ -518,7 +524,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
       { key: 'avg_sos', higherIsBetter: true },
       { key: 'best_rpi_rank', higherIsBetter: false },  // lower rank = better
       { key: 'non_conf_win_pct', higherIsBetter: true },
-      { key: 'top_half_adj_net', higherIsBetter: true },
     ];
 
     const result = {};
@@ -901,9 +906,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
                       <th className="col-sortable" onClick={() => handleRankSort('non_conf_win_pct')}>
                         Non-Conf Win%{rankSortIndicator('non_conf_win_pct')}
                       </th>
-                      <th className="col-sortable" onClick={() => handleRankSort('top_half_adj_net')}>
-                        Top-Half NET{rankSortIndicator('top_half_adj_net')}
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -930,10 +932,6 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
                             ? (conf.non_conf_win_pct * 100).toFixed(1) + '%'
                             : '-'}
                         </td>
-                        <td className={`mono-cell ${getRankingColorClass(conf.conference, 'top_half_adj_net')}`}
-                            title={conf.top_half_count != null ? `${conf.top_half_count} teams proj. ≥.500 in conf. play` : ''}>
-                          {conf.top_half_adj_net != null ? conf.top_half_adj_net.toFixed(2) : '-'}
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -941,6 +939,49 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
               </div>
             )}
           </section>
+
+          {/* Top-Half NET Standalone Table */}
+          {topHalfRankings.length > 0 && (
+            <section className="conf-top-half-section">
+              <h3 className="conf-top-half-title">
+                Ranking of conferences by NetRtg of teams expected to go .500 in conference play
+              </h3>
+              <div className="conf-top-half-grid">
+                {[0, 1].map(col => {
+                  const half = Math.ceil(topHalfRankings.length / 2);
+                  const slice = col === 0
+                    ? topHalfRankings.slice(0, half)
+                    : topHalfRankings.slice(half);
+                  return (
+                    <table key={col} className="conf-top-half-table">
+                      <thead>
+                        <tr>
+                          <th></th>
+                          <th>Conference</th>
+                          <th>Rating</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {slice.map(conf => (
+                          <tr
+                            key={conf.conference}
+                            className="conf-top-half-row"
+                            onClick={() => handleConferenceChange(conf.conference)}
+                          >
+                            <td className="conf-top-half-rank">{conf.topHalfRank}</td>
+                            <td className="conf-top-half-name">{conf.conference}</td>
+                            <td className="conf-top-half-rating">
+                              {conf.top_half_adj_net > 0 ? '+' : ''}{conf.top_half_adj_net.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })}
+              </div>
+            </section>
+          )}
         </div>
       )}
 

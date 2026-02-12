@@ -932,3 +932,87 @@
     min-width: 130px;
   }
 }
+
+/* ===== Top-Half NET Standalone Table ===== */
+.conf-top-half-section {
+  margin-top: 32px;
+}
+
+.conf-top-half-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary, #e0e0e0);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.conf-top-half-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.conf-top-half-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.conf-top-half-table thead th {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary, #aaa);
+  padding: 4px 8px 6px;
+  border-bottom: 1px solid var(--border-color, #333);
+  text-align: left;
+}
+
+.conf-top-half-table thead th:first-child {
+  width: 28px;
+  text-align: center;
+}
+
+.conf-top-half-table thead th:last-child {
+  text-align: right;
+}
+
+.conf-top-half-row {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.conf-top-half-row:hover {
+  background: var(--hover-bg, rgba(255,255,255,0.06));
+}
+
+.conf-top-half-row td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border-subtle, rgba(255,255,255,0.04));
+}
+
+.conf-top-half-rank {
+  text-align: center;
+  color: var(--text-secondary, #aaa);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+.conf-top-half-name {
+  color: var(--text-primary, #e0e0e0);
+  font-weight: 500;
+}
+
+.conf-top-half-rating {
+  text-align: right;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 500;
+  color: var(--text-primary, #e0e0e0);
+}
+
+@media (max-width: 700px) {
+  .conf-top-half-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
