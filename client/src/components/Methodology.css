@@ -1,0 +1,154 @@
+/* ===== Methodology Page ===== */
+.methodology-page {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.methodology-content {
+  padding: 0 24px 48px;
+}
+
+/* ===== Sections ===== */
+.method-section {
+  margin-bottom: 32px;
+}
+
+.method-section h2 {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--color-border-primary);
+}
+
+.method-section > p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin: 0 0 16px;
+}
+
+/* ===== Cards ===== */
+.method-card {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 12px;
+}
+
+.method-card h3 {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 8px;
+}
+
+.method-card p {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  margin: 0 0 8px;
+}
+
+.method-card p:last-child {
+  margin-bottom: 0;
+}
+
+.method-card ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+}
+
+/* ===== Formula Blocks ===== */
+.formula {
+  font-family: var(--font-mono, 'SF Mono', 'Menlo', monospace);
+  font-size: 13px;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  color: var(--color-text-primary);
+  overflow-x: auto;
+}
+
+/* ===== Tables ===== */
+.method-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 4px;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.method-table th,
+.method-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border-primary);
+  color: var(--color-text-secondary);
+}
+
+.method-table th {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.method-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ===== Limitations List ===== */
+.method-limitations {
+  margin: 0;
+  padding-left: 20px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--color-text-secondary);
+}
+
+.method-limitations li {
+  margin-bottom: 4px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .methodology-content {
+    padding: 0 16px 32px;
+  }
+
+  .method-section h2 {
+    font-size: 18px;
+  }
+
+  .method-card {
+    padding: 14px 16px;
+  }
+
+  .formula {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .methodology-content {
+    padding: 0 12px 24px;
+  }
+
+  .method-section h2 {
+    font-size: 16px;
+  }
+}
