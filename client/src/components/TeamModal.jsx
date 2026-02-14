@@ -91,8 +91,9 @@ function TeamModal({ team, season = '2025-26', onClose }) {
     // Navigate to scout page with current params and team selection
     const params = new URLSearchParams(searchParams);
     params.set('team', team.team_id);
-    navigate(`/scout?${params.toString()}`);
+    params.delete('teamModal');
     onClose();
+    navigate(`/scout?${params.toString()}`);
   };
 
   useEffect(() => {
