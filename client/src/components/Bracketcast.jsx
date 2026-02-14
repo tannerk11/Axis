@@ -1,31 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import './Bracketcast.css';
 import TeamLogo from './TeamLogo';
-
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
-
-// Tooltip descriptions for bracketcast columns
-const TOOLTIPS = {
-  rank: 'Rank - Dynamic ranking based on current sort column',
-  rpi_rank: 'RPI Rank - Team ranking based on Rating Percentage Index',
-  area: 'Geographic Area - East, Midwest, North, South, or West',
-  record: 'Total Record - All games including non-NAIA (excludes exhibitions)',
-  total_win_pct: 'Total WP - Win percentage from all games (used for overall evaluation)',
-  naia_win_pct: 'NAIA WP - Win percentage from NAIA games only (used in RPI formula)',
-  rpi: 'RPI - Rating Percentage Index: WP(0.30) + OWP(0.50) + OOWP(0.20)',
-  q1: 'Quadrant 1 Record - Wins/Losses vs top opponents (Home: 1-45, Neutral: 55, Away: 65)',
-  q2: 'Quadrant 2 Record - Wins/Losses vs good opponents (Home: 46-90, Neutral: 56-105, Away: 66-120)',
-  q3: 'Quadrant 3 Record - Wins/Losses vs average opponents (Home: 91-135, Neutral: 106-150, Away: 121-165)',
-  q4: 'Quadrant 4 Record - Wins/Losses vs weaker opponents (Home: 136+, Neutral: 150+, Away: 166+)',
-  qwp: 'Quad Win Points - Q1 win = 4pts, Q2 win = 2pts, Q3 win = 1pt, Q4 win = 0.5pts',
-  pcr: 'Primary Criteria Ranking - Composite rank from Overall Win %, RPI, and QWP',
-  pr: 'Projected Rank - PCR with conference champions guaranteed top 64',
-  net_efficiency: 'Net Efficiency - Offensive Rating minus Defensive Rating',
-  sos: 'Strength of Schedule - Average quality of opponents faced',
-  sos_rank: 'SOS Rank - Strength of Schedule ranking',
-  owp: 'OWP - Opponent Win Percentage (NAIA games only)',
-  oowp: 'OOWP - Opponent\'s Opponent Win Percentage (NAIA games only)',
-};
+import SkeletonLoader from './SkeletonLoader';
+import { API_URL } from '../utils/api';
+import { TOOLTIPS } from '../utils/tooltips';
+import { exportToCSV } from '../utils/csv';
 
 const COLUMNS = [
   { key: 'rank', label: 'Rank' }, // Dynamic rank based on current sort
@@ -205,7 +184,7 @@ function Bracketcast({ league, season, onTeamClick }) {
         <div className="page-header">
           <h1>Bracketcast</h1>
         </div>
-        <div className="loading">Loading bracketcast data...</div>
+        <SkeletonLoader variant="table" rows={12} />
       </main>
     );
   }
@@ -259,6 +238,37 @@ function Bracketcast({ league, season, onTeamClick }) {
             </button>
           )}
         </div>
+        <button className="export-csv-btn" onClick={() => {
+          const csvCols = COLUMNS.filter(c => c.key !== 'rank').map(c => ({
+            key: c.key, label: c.label,
+          }));
+          csvCols.unshift({ key: '_rank', label: 'Rank' });
+          exportToCSV(
+            sortedTeams.map((t, i) => ({ ...t, _rank: i + 1 })),
+            csvCols,
+            'axis-bracketcast',
+            (row, colKey) => {
+              if (colKey === '_rank') return row._rank;
+              if (colKey === 'team') return row.name;
+              if (colKey === 'record') return `${row.total_wins}-${row.total_losses}`;
+              if (colKey === 'q1') return `${row.q1_wins}-${row.q1_losses}`;
+              if (colKey === 'q2') return `${row.q2_wins}-${row.q2_losses}`;
+              if (colKey === 'q3') return `${row.q3_wins}-${row.q3_losses}`;
+              if (colKey === 'q4') return `${row.q4_wins}-${row.q4_losses}`;
+              const val = row[colKey];
+              if (val === null || val === undefined) return '';
+              if (['rpi', 'total_win_pct', 'naia_win_pct', 'owp', 'oowp', 'sos'].includes(colKey)) return Number(val).toFixed(3);
+              return val;
+            }
+          );
+        }} title="Export to CSV">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export CSV
+        </button>
       </div>
 
       {view === 'table' ? (

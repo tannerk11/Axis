@@ -7,6 +7,7 @@ import {
 } from 'recharts';
 import InsightScatterChart from './InsightScatterChart';
 import TeamLogo from './TeamLogo';
+import SkeletonLoader from './SkeletonLoader';
 import './Conferences.css';
 
 // Error boundary to catch render errors
@@ -35,7 +36,7 @@ class ConferenceErrorBoundary extends Component {
   }
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
+import { API_URL } from '../utils/api';
 
 // Profile comparison metrics (conference avg vs national avg)
 const PROFILE_METRICS = [
@@ -553,7 +554,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
             <h3 className="conf-section-title">All Conference Rankings</h3>
             <p className="conf-rankings-subtitle">Click any conference to explore its full breakdown</p>
             {rankingsLoading ? (
-              <div className="conf-loading">Loading conference rankings...</div>
+              <SkeletonLoader variant="table" rows={8} />
             ) : (
               <div className="conf-table-container">
                 <table className="conf-rankings-table">
@@ -671,7 +672,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
               <span className="conf-scatter-subtitle">Each dot is a team. Conferences ordered by average Adj NET rating (best to worst, left to right).</span>
             </div>
             {netScatterLoading ? (
-              <div className="conf-loading">Loading...</div>
+              <SkeletonLoader variant="card" rows={4} />
             ) : netStripData.conferences.length > 0 && (
               <div className="conf-rpi-strip-wrapper">
                 <ResponsiveContainer width="100%" height={500}>
@@ -762,7 +763,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
               <p>Select a conference above to view its breakdown</p>
             </div>
           ) : loading ? (
-            <div className="conf-loading">Loading conference data...</div>
+            <SkeletonLoader variant="card" rows={6} />
           ) : (
             <div className="conf-content">
 
@@ -1095,7 +1096,7 @@ function Conferences({ league, season, conferences = [], teams = [] }) {
             </div>
 
             {scheduleLoading ? (
-              <div className="conf-loading">Loading schedule...</div>
+              <SkeletonLoader variant="table" rows={5} />
             ) : weeklySchedule.length === 0 ? (
               <div className="conf-no-data">No conference games this week</div>
             ) : (

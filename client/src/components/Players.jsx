@@ -4,38 +4,10 @@ import TeamLogo from './TeamLogo';
 import ViewToggle from './ViewToggle';
 import PlayerVisualizations from './PlayerVisualizations';
 
-// API URL
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
-
-// Normalize year values to consistent format
-const normalizeYear = (year) => {
-  if (!year) return '-';
-  const y = year.toLowerCase().trim().replace('.', '');
-  if (y === 'fr' || y === 'freshman') return 'Fr';
-  if (y === 'so' || y === 'sophomore') return 'So';
-  if (y === 'jr' || y === 'junior') return 'Jr';
-  if (y === 'sr' || y === 'senior') return 'Sr';
-  if (y === 'gr' || y === 'grad' || y === 'grad senior' || y === 'graduate') return 'Gr';
-  if (y.includes('r-') || y.includes('rs ') || y.includes('redshirt')) return 'RS';
-  return year; // Return original if no match
-};
-
-// Normalize position values to consistent format
-const normalizePosition = (pos) => {
-  if (!pos) return '-';
-  const p = pos.toLowerCase().trim();
-  if (p === 'guard' || p === 'g') return 'G';
-  if (p === 'forward' || p === 'f') return 'F';
-  if (p === 'center' || p === 'c') return 'C';
-  if (p === 'point guard' || p === 'pg') return 'PG';
-  if (p === 'shooting guard' || p === 'sg') return 'SG';
-  if (p === 'small forward' || p === 'sf') return 'SF';
-  if (p === 'power forward' || p === 'pf') return 'PF';
-  if (p === 'g/f' || p === 'guard/forward') return 'G/F';
-  if (p === 'f/c' || p === 'forward/center') return 'F/C';
-  if (p === 'w' || p === 'wing') return 'W';
-  return pos.toUpperCase(); // Return uppercase original if no match
-};
+import { API_URL } from '../utils/api';
+import { normalizeYear, normalizePosition } from '../utils/normalizers';
+import SkeletonLoader from './SkeletonLoader';
+import { exportToCSV } from '../utils/csv';
 
 // Stat group configurations for players
 const STAT_GROUPS = {
@@ -421,8 +393,34 @@ function Players({ league, season, conferences }) {
 
       {/* Table */}
       <div className="players-table-wrapper">
+        <div className="teams-table-toolbar">
+          <span className="teams-count">{total} players</span>
+          <button className="export-csv-btn" onClick={() => {
+            const csvCols = [
+              { key: 'name', label: 'Player' },
+              { key: 'team_name', label: 'Team' },
+              { key: 'position', label: 'Pos' },
+              { key: 'year', label: 'Year' },
+              ...columns.map(c => ({ key: c.key, label: c.label })),
+            ];
+            exportToCSV(players, csvCols, `axis-players-${statGroup.toLowerCase()}`, (row, colKey) => {
+              if (colKey === 'position') return normalizePosition(row.position);
+              if (colKey === 'year') return normalizeYear(row.year);
+              const val = row[colKey];
+              if (val === null || val === undefined) return '';
+              return val;
+            });
+          }} title="Export to CSV">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export CSV
+          </button>
+        </div>
         {loading ? (
-          <div className="loading">Loading players...</div>
+          <SkeletonLoader variant="table" rows={10} />
         ) : (
           <div className="players-table-container">
             <table className="players-table">
@@ -506,6 +504,7 @@ function Players({ league, season, conferences }) {
         <PlayerVisualizations
           players={filteredPlayersForViz}
           loading={vizLoading}
+          isAllConferences={!filters.conference}
         />
       )}
     </div>

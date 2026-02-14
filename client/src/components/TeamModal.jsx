@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import './TeamModal.css';
 import TeamLogo from './TeamLogo';
-
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
+import { API_URL } from '../utils/api';
+import SkeletonLoader from './SkeletonLoader';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 // Stat group configurations (same as TeamsTable but without rank columns)
 const STAT_GROUPS = {
@@ -80,6 +81,7 @@ const STAT_GROUPS = {
 function TeamModal({ team, season = '2025-26', onClose }) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const focusTrapRef = useFocusTrap();
   const [splits, setSplits] = useState([]);
   const [schedule, setSchedule] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -171,16 +173,16 @@ function TeamModal({ team, season = '2025-26', onClose }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>×</button>
+    <div className="modal-overlay" onClick={onClose} role="presentation">
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} ref={focusTrapRef} role="dialog" aria-modal="true" aria-labelledby="team-modal-title">
+        <button className="modal-close" onClick={onClose} aria-label="Close modal">×</button>
 
         {/* Team Header */}
         <div className="modal-header">
           <div className="modal-team-info">
             <TeamLogo logoUrl={team.logo_url} teamName={team.name} />
             <div className="modal-team-details">
-              <h2 className="modal-team-name">{team.name}</h2>
+              <h2 id="team-modal-title" className="modal-team-name">{team.name}</h2>
               <span className="modal-team-conference">{team.conference}</span>
             </div>
           </div>
@@ -234,7 +236,7 @@ function TeamModal({ team, season = '2025-26', onClose }) {
           {/* Splits Table */}
           <div className="modal-table-container">
             {loading ? (
-              <div className="modal-loading">Loading...</div>
+              <SkeletonLoader variant="modal" />
             ) : splits.length === 0 ? (
               <div className="modal-no-data">No split data available</div>
             ) : (

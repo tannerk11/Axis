@@ -14,7 +14,8 @@ import './Matchup.css';
 import TeamLogo from './TeamLogo';
 import MatchupComparisonBar from './MatchupComparisonBar';
 
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
+import { API_URL } from '../utils/api';
+import SkeletonLoader from './SkeletonLoader';
 
 const RADAR_METRICS = [
   { key: 'efg_pct', label: 'eFG%', higherIsBetter: true },
@@ -206,7 +207,7 @@ function Matchup({ league, season, teams = [], conferences = [] }) {
         </div>
       )}
 
-      {loading && <div className="matchup-loading">Loading matchup data...</div>}
+      {loading && <SkeletonLoader variant="card" rows={6} />}
 
       {data && !loading && (
         <div className="matchup-content">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import FilterBar from './components/FilterBar';
@@ -7,16 +7,18 @@ import ViewToggle from './components/ViewToggle';
 import TeamsTable from './components/TeamsTable';
 import TeamModal from './components/TeamModal';
 import ConferenceModal from './components/ConferenceModal';
-import Bracketcast from './components/Bracketcast';
-import Insights from './components/Insights';
-import Scout from './components/Scout';
-import Players from './components/Players';
-import Conferences from './components/Conferences';
+import SkeletonLoader from './components/SkeletonLoader';
+import Footer from './components/Footer';
+import { API_URL } from './utils/api';
 import './App.css';
 
-// In production, API is served from same origin (empty string)
-// In development, use localhost:3001
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
+// Lazy-load secondary page components for code splitting
+const Bracketcast = lazy(() => import('./components/Bracketcast'));
+const Insights = lazy(() => import('./components/Insights'));
+const Scout = lazy(() => import('./components/Scout'));
+const Players = lazy(() => import('./components/Players'));
+const Conferences = lazy(() => import('./components/Conferences'));
+const Methodology = lazy(() => import('./components/Methodology'));
 
 // Default values for URL params
 const DEFAULTS = {
@@ -48,10 +50,15 @@ function App() {
   const [months, setMonths] = useState([]);
   const [seasons, setSeasons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [selectedConference, setSelectedConference] = useState(null);
   const [hasPlayers, setHasPlayers] = useState(false);
+
+  // Deep link support: read modal params from URL
+  const teamModalId = searchParams.get('teamModal');
+  const conferenceModalName = searchParams.get('conferenceModal');
 
   // Helper to update URL params
   const updateParams = useCallback((updates) => {
@@ -93,6 +100,7 @@ function App() {
     if (path.startsWith('/conferences')) return 'conferences';
     if (path.startsWith('/bracketcast')) return 'bracketcast';
     if (path.startsWith('/scout')) return 'scout';
+    if (path.startsWith('/methodology')) return 'methodology';
     if (path.startsWith('/players')) return 'players';
     return 'teams';
   };
@@ -117,20 +125,22 @@ function App() {
           fetch(`${API_URL}/api/last-updated?league=${league}&season=${season}`),
           fetch(`${API_URL}/api/players/exists?league=${league}&season=${season}`),
         ]);
-        
+
         const seasonsData = await seasonsRes.json();
         const conferencesData = await conferencesRes.json();
         const monthsData = await monthsRes.json();
         const lastUpdatedData = await lastUpdatedRes.json();
         const playersExistsData = await playersExistsRes.json();
-        
+
         setSeasons(seasonsData || []);
         setConferences(conferencesData || []);
         setMonths(monthsData || []);
         setLastUpdated(lastUpdatedData.lastUpdated || null);
         setHasPlayers(playersExistsData.hasPlayers || false);
-      } catch (error) {
-        console.error('Error fetching metadata:', error);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching metadata:', err);
+        setError('Unable to connect to the server. Please try again.');
       }
     };
     fetchMetadata();
@@ -138,6 +148,7 @@ function App() {
 
   const fetchTeams = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       // Handle seasonSegment - some values are season types, not segments
       const seasonTypeMap = {
@@ -147,7 +158,7 @@ function App() {
       };
 
       let url = `${API_URL}/api/teams?league=${league}&season=${season}`;
-      
+
       if (conference !== 'All Conferences') {
         url += `&conference=${encodeURIComponent(conference)}`;
       }
@@ -165,9 +176,10 @@ function App() {
       const response = await fetch(url);
       const teamsData = await response.json();
       setTeams(Array.isArray(teamsData) ? teamsData : []);
-    } catch (error) {
-      console.error('Error fetching teams:', error);
+    } catch (err) {
+      console.error('Error fetching teams:', err);
       setTeams([]);
+      setError('Unable to load team data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -178,21 +190,58 @@ function App() {
     fetchTeams();
   }, [fetchTeams]);
 
-  const handleTeamClick = (team) => {
+  const handleTeamClick = useCallback((team) => {
     setSelectedTeam(team);
-  };
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set('teamModal', team.team_id);
+      return p;
+    });
+  }, [setSearchParams]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setSelectedTeam(null);
-  };
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.delete('teamModal');
+      return p;
+    });
+  }, [setSearchParams]);
 
-  const handleConferenceClick = (conferenceName) => {
+  const handleConferenceClick = useCallback((conferenceName) => {
     setSelectedConference(conferenceName);
-  };
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set('conferenceModal', conferenceName);
+      return p;
+    });
+  }, [setSearchParams]);
 
-  const handleCloseConferenceModal = () => {
+  const handleCloseConferenceModal = useCallback(() => {
     setSelectedConference(null);
-  };
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.delete('conferenceModal');
+      return p;
+    });
+  }, [setSearchParams]);
+
+  // Deep link: open team modal from URL param on load
+  useEffect(() => {
+    if (teamModalId && !selectedTeam && teams.length > 0) {
+      const team = teams.find(t => String(t.team_id) === String(teamModalId));
+      if (team) {
+        setSelectedTeam(team);
+      }
+    }
+  }, [teamModalId, teams, selectedTeam]);
+
+  // Deep link: open conference modal from URL param on load
+  useEffect(() => {
+    if (conferenceModalName && !selectedConference) {
+      setSelectedConference(conferenceModalName);
+    }
+  }, [conferenceModalName, selectedConference]);
 
   const handleFilterChange = (key, value) => {
     updateParams({ [key]: value });
@@ -256,6 +305,7 @@ function App() {
 
   return (
     <div className="app">
+      <a href="#main-content" className="skip-link">Skip to content</a>
       <Header
         league={league}
         onLeagueChange={setLeague}
@@ -267,55 +317,75 @@ function App() {
         onPageChange={setCurrentPage}
         hasPlayers={hasPlayers}
       />
-      <main className="main-content">
-        <Routes>
-          <Route path="/" element={<TeamsPage />} />
-          <Route path="/teams" element={<Navigate to="/" replace />} />
-          <Route path="/insights" element={<Navigate to="/?view=visualizations" replace />} />
-          <Route
-            path="/conferences"
-            element={
-              <Conferences
-                league={league}
-                season={season}
-                conferences={conferences}
-                teams={teams}
-              />
-            }
-          />
-          <Route
-            path="/bracketcast"
-            element={
-              <Bracketcast
-                league={league}
-                season={season}
-                onTeamClick={handleTeamClick}
-              />
-            }
-          />
-          <Route
-            path="/scout"
-            element={
-              <Scout
-                league={league}
-                season={season}
-                teams={teams}
-                conferences={conferences}
-              />
-            }
-          />
-          <Route
-            path="/players"
-            element={
-              <Players
-                league={league}
-                season={season}
-                conferences={conferences}
-              />
-            }
-          />
-        </Routes>
+      <main id="main-content" className="main-content">
+        {error && (
+          <div className="error-banner">
+            <p>{error}</p>
+            <button onClick={fetchTeams}>Retry</button>
+          </div>
+        )}
+        <Suspense fallback={<SkeletonLoader variant="table" rows={10} />}>
+          <Routes>
+            <Route path="/" element={<TeamsPage />} />
+            <Route path="/teams" element={<Navigate to="/" replace />} />
+            <Route path="/insights" element={<Navigate to="/?view=visualizations" replace />} />
+            <Route
+              path="/conferences"
+              element={
+                <Conferences
+                  league={league}
+                  season={season}
+                  conferences={conferences}
+                  teams={teams}
+                />
+              }
+            />
+            <Route
+              path="/bracketcast"
+              element={
+                <Bracketcast
+                  league={league}
+                  season={season}
+                  onTeamClick={handleTeamClick}
+                />
+              }
+            />
+            <Route
+              path="/scout"
+              element={
+                <Scout
+                  league={league}
+                  season={season}
+                  teams={teams}
+                  conferences={conferences}
+                />
+              }
+            />
+            <Route
+              path="/players"
+              element={
+                <Players
+                  league={league}
+                  season={season}
+                  conferences={conferences}
+                />
+              }
+            />
+            <Route path="/methodology" element={<Methodology />} />
+            <Route
+              path="*"
+              element={
+                <div className="not-found">
+                  <h1>404</h1>
+                  <p>Page not found</p>
+                  <button onClick={() => navigate('/')}>Go to Teams</button>
+                </div>
+              }
+            />
+          </Routes>
+        </Suspense>
       </main>
+      <Footer />
       {selectedTeam && (
         <TeamModal
           team={selectedTeam}

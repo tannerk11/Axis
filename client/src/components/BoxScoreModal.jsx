@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import './BoxScoreModal.css';
 import TeamLogo from './TeamLogo';
-
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
+import { API_URL } from '../utils/api';
+import SkeletonLoader from './SkeletonLoader';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 function BoxScoreModal({ gameId, season, onClose }) {
+  const focusTrapRef = useFocusTrap();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,16 +55,16 @@ function BoxScoreModal({ gameId, season, onClose }) {
   if (!gameId) return null;
 
   return (
-    <div className="boxscore-overlay" onClick={handleOverlayClick}>
-      <div className="boxscore-modal">
-        <button className="boxscore-close" onClick={onClose}>
+    <div className="boxscore-overlay" onClick={handleOverlayClick} role="presentation">
+      <div className="boxscore-modal" ref={focusTrapRef} role="dialog" aria-modal="true" aria-label="Box Score">
+        <button className="boxscore-close" onClick={onClose} aria-label="Close box score">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
 
         {loading ? (
-          <div className="boxscore-loading">Loading box score...</div>
+          <SkeletonLoader variant="modal" />
         ) : !data ? (
           <div className="boxscore-loading">Box score unavailable</div>
         ) : (

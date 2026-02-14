@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import './Insights.css';
+import SkeletonLoader from './SkeletonLoader';
 import TrapezoidChart from './TrapezoidChart';
 import ChampionshipDNA from './ChampionshipDNA';
 import InsightScatterChart from './InsightScatterChart';
@@ -68,14 +69,14 @@ function Insights({ teams, conferences = [], league, season, loading, onTeamClic
 
   if (loading) {
     if (embedded) {
-      return <div className="loading">Loading visualizations...</div>;
+      return <SkeletonLoader variant="card" rows={4} />;
     }
     return (
       <main className="main-content insights-page">
         <div className="page-header">
           <h1>Insights</h1>
         </div>
-        <div className="loading">Loading insights...</div>
+        <SkeletonLoader variant="card" rows={4} />
       </main>
     );
   }

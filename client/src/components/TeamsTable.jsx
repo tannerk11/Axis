@@ -1,6 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import './TeamsTable.css';
 import TeamLogo from './TeamLogo';
+import SkeletonLoader from './SkeletonLoader';
+import { TOOLTIPS } from '../utils/tooltips';
+import { exportToCSV } from '../utils/csv';
 
 // Columns that should show sub-rankings with conditional formatting
 // sortLowerFirst: true means lower values get rank 1 (like defense)
@@ -9,81 +12,6 @@ const RANKED_COLUMNS = {
   adjusted_net_rating: { sortLowerFirst: false },
   adjusted_offensive_rating: { sortLowerFirst: false },
   adjusted_defensive_rating: { sortLowerFirst: true },  // Lower defensive rating = better
-};
-
-// Tooltip descriptions for all stats
-const TOOLTIPS = {
-  // Basic stats
-  games_played: 'Games Played - Total NAIA games played this season',
-  record: 'Win-Loss Record',
-  wins: 'Total Wins',
-  losses: 'Total Losses',
-  win_pct: 'NAIA Win Percentage - Wins / Games Played (NAIA games only)',
-
-  // Ratings
-  adjusted_net_rating: 'Adjusted Net Rating - Offensive Rating minus Defensive Rating, adjusted for strength of schedule. Higher is better.',
-  adjusted_offensive_rating: 'Adjusted Offensive Rating - Points per 100 possessions, adjusted for opponent defensive strength',
-  adjusted_defensive_rating: 'Adjusted Defensive Rating - Points allowed per 100 possessions, adjusted for opponent offensive strength. Lower is better.',
-  net_rating: 'Net Rating - Offensive Rating minus Defensive Rating (unadjusted)',
-  offensive_rating: 'Offensive Rating (ORTG) - Points scored per 100 possessions',
-  defensive_rating: 'Defensive Rating (DRTG) - Points allowed per 100 possessions. Lower is better.',
-
-  // Schedule strength
-  strength_of_schedule: 'Strength of Schedule - Average quality of opponents faced',
-  nsos: 'Net Strength of Schedule - Average opponent net rating',
-  osos: 'Offensive SOS - Average opponent offensive rating',
-  dsos: 'Defensive SOS - Average opponent defensive rating',
-  rpi: 'Rating Percentage Index - 25% Win%, 50% Opp Win%, 25% Opp Opp Win%',
-  opponent_win_pct: 'Opponent Win Percentage - Average win% of opponents faced',
-  opponent_opponent_win_pct: "Opponents' Opponent Win% - Average win% of opponents' opponents",
-
-  // Four Factors
-  efg_pct: 'Effective FG% - (FGM + 0.5 × 3PM) / FGA. Accounts for 3-pointers being worth more.',
-  efg_pct_opp: 'Opponent Effective FG% - eFG% allowed to opponents. Lower is better.',
-  turnover_pct: 'Turnover Percentage - Turnovers per 100 possessions. Lower is better.',
-  turnover_pct_opp: 'Opponent Turnover% - Turnovers forced per 100 opponent possessions',
-  oreb_pct: 'Offensive Rebound% - % of available offensive rebounds grabbed',
-  dreb_pct: 'Defensive Rebound% - % of available defensive rebounds grabbed',
-  oreb_pct_opp: 'Opponent OREB% - % of offensive rebounds allowed. Lower is better.',
-  dreb_pct_opp: 'Opponent DREB% - % of defensive rebounds by opponents',
-  ft_rate: 'Free Throw Rate - FTA / FGA. Measures ability to get to the line.',
-  ft_pct: 'Free Throw Percentage - FTM / FTA',
-
-  // Shooting
-  points_per_game: 'Points Per Game - Average points scored',
-  points_allowed_per_game: 'Points Allowed Per Game - Average points given up. Lower is better.',
-  fg_pct: 'Field Goal Percentage - FGM / FGA',
-  fg3_pct: '3-Point Percentage - 3PM / 3PA',
-  fg_pct_opp: 'Opponent FG% - FG% allowed. Lower is better.',
-  fg3_pct_opp: 'Opponent 3P% - 3P% allowed. Lower is better.',
-  three_pt_rate: '3-Point Rate - 3PA / FGA. Measures shot selection.',
-  pts_paint_per_game: 'Points in Paint Per Game',
-  pts_fastbreak_per_game: 'Fastbreak Points Per Game',
-
-  // Rebounding
-  reb_per_game: 'Rebounds Per Game - Total rebounds',
-  oreb_per_game: 'Offensive Rebounds Per Game',
-  dreb_per_game: 'Defensive Rebounds Per Game',
-  stl_per_game: 'Steals Per Game',
-  blk_per_game: 'Blocks Per Game',
-
-  // Playmaking
-  pace: 'Pace - Possessions per game. Measures game tempo.',
-  ast_per_game: 'Assists Per Game',
-  to_per_game: 'Turnovers Per Game. Lower is better.',
-  pts_off_to_per_game: 'Points Off Turnovers Per Game - Points scored from opponent turnovers',
-  opp_pts_off_to_per_game: 'Opponent Points Off Turnovers - Points given up from turnovers. Lower is better.',
-  pts_bench_per_game: 'Bench Points Per Game - Points from non-starters',
-  pf_per_game: 'Personal Fouls Per Game',
-
-  // Defense
-  opp_pts_paint_per_game: 'Opponent Points in Paint - Paint points allowed. Lower is better.',
-  opp_pts_fastbreak_per_game: 'Opponent Fastbreak Points - Fastbreak points allowed. Lower is better.',
-  opp_ast_per_game: 'Opponent Assists Per Game - Assists allowed. Lower is better.',
-
-  // Experimental
-  qwi: 'Quality Win Index - Weighted sum of quadrant wins minus quadrant losses. Q1W×1.0 - Q1L×0.25 + Q2W×0.6 - Q2L×0.5 + Q3W×0.3 - Q3L×0.75 + Q4W×0.1 - Q4L×1.0',
-  power_index: 'Power Index - Composite metric: 35% AdjORTG + 35% Inverted AdjDRTG + 15% SOS + 7.5% NAIA Win% + 7.5% QWI',
 };
 
 // Column definitions for each stat group
@@ -337,7 +265,7 @@ function TeamsTable({ teams, loading, statGroup = 'Overview', onTeamClick, onCon
   if (loading) {
     return (
       <div className="teams-table-container">
-        <div className="loading">Loading teams...</div>
+        <SkeletonLoader variant="table" rows={10} />
       </div>
     );
   }
@@ -352,8 +280,38 @@ function TeamsTable({ teams, loading, statGroup = 'Overview', onTeamClick, onCon
 
   const totalTeams = teams.length;
 
+  const handleExportCSV = useCallback(() => {
+    const exportColumns = [
+      { key: 'name', label: 'Team' },
+      { key: 'conference', label: 'Conference' },
+      ...columns.map(col => ({ key: col.key, label: col.label })),
+    ];
+    exportToCSV(
+      sortedTeams,
+      exportColumns,
+      `axis-teams-${statGroup.toLowerCase()}`,
+      (row, colKey) => {
+        if (colKey === 'name' || colKey === 'conference') return row[colKey];
+        const col = columns.find(c => c.key === colKey);
+        if (!col) return row[colKey];
+        return formatValue(row, col);
+      }
+    );
+  }, [sortedTeams, columns, statGroup, formatValue]);
+
   return (
     <div className="teams-table-wrapper">
+      <div className="teams-table-toolbar">
+        <span className="teams-count">{totalTeams} teams</span>
+        <button className="export-csv-btn" onClick={handleExportCSV} title="Export to CSV">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export CSV
+        </button>
+      </div>
       <div className="teams-table-container">
         <table className="teams-table">
           <thead>

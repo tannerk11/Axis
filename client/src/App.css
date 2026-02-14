@@ -1,3 +1,31 @@
+/* ===== Skip Link (Accessibility) ===== */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 9999;
+  padding: 10px 16px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-text-primary);
+  border-radius: 4px;
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  width: auto;
+  height: auto;
+}
+
 .app {
   min-height: 100vh;
   background-color: var(--color-bg-primary);
@@ -69,6 +97,10 @@
 
 /* Tablet and smaller */
 @media (max-width: 768px) {
+  .app {
+    padding-bottom: 64px; /* Space for fixed bottom tab bar */
+  }
+
   .main-content {
     padding: 0;
   }
@@ -119,4 +151,84 @@
   .page-header h1 {
     font-size: 18px;
   }
+}
+
+/* ===== Error Banner ===== */
+.error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 24px;
+  margin: 16px 24px 0;
+  background-color: var(--color-loss-bg);
+  color: var(--color-loss-text);
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.error-banner p {
+  margin: 0;
+}
+
+.error-banner button {
+  padding: 4px 12px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.error-banner button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ===== 404 Not Found ===== */
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.not-found h1 {
+  font-family: var(--font-heading);
+  font-size: 72px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  margin: 0;
+  line-height: 1;
+}
+
+.not-found p {
+  font-family: var(--font-body);
+  font-size: 16px;
+  color: var(--color-text-secondary);
+  margin: 8px 0 24px;
+}
+
+.not-found button {
+  padding: 8px 20px;
+  border: 1px solid var(--color-border-primary);
+  border-radius: 6px;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.not-found button:hover {
+  background-color: var(--color-bg-hover);
 }

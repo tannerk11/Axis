@@ -102,6 +102,11 @@
   gap: 8px;
 }
 
+/* Page nav dropdown - hidden by default, shown at medium breakpoints */
+.nav-page-dropdown {
+  display: none;
+}
+
 /* Dropdown selectors */
 .dropdown-selector select {
   padding: 8px 36px 8px 14px;
@@ -155,9 +160,59 @@
   border-color: var(--color-border-primary);
 }
 
-/* Mobile navigation dropdown - hidden by default */
-.nav-dropdown-mobile {
+/* ===== Mobile Bottom Tab Bar ===== */
+.mobile-tab-bar {
   display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--color-bg-header);
+  border-top: 1px solid var(--color-border-primary);
+  padding: 4px 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.tab-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  padding: 6px 4px;
+  border: none;
+  background: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s;
+  font-family: var(--font-heading);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+.tab-bar-item:hover {
+  color: var(--color-text-secondary);
+}
+
+.tab-bar-item.active {
+  color: var(--color-accent-primary);
+}
+
+.tab-bar-item svg {
+  flex-shrink: 0;
+}
+
+/* Medium screens - collapse nav buttons to dropdown */
+@media (max-width: 1024px) {
+  .nav-right {
+    display: none;
+  }
+
+  .nav-page-dropdown {
+    display: block;
+  }
 }
 
 /* Mobile styles */
@@ -166,8 +221,20 @@
     padding: 10px 16px;
   }
 
+  .header-top {
+    flex-wrap: wrap;
+  }
+
   .header-center {
-    display: none;
+    display: flex;
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+    padding-top: 4px;
+  }
+
+  .last-updated {
+    font-size: 11px;
   }
 
   .logo-icon {
@@ -203,15 +270,13 @@
     flex: 1;
   }
 
-  /* Hide desktop nav buttons on mobile */
-  .nav-right {
+  /* Hide page dropdown too, replaced by bottom tab bar */
+  .nav-page-dropdown {
     display: none;
   }
 
-  /* Show mobile nav dropdown */
-  .nav-dropdown-mobile {
-    display: block;
-    margin-left: auto;
+  .mobile-tab-bar {
+    display: flex;
   }
 
   .dropdown-selector select {
@@ -260,11 +325,5 @@
     padding: 8px 28px 8px 10px;
     font-size: 12px;
     background-position: right 8px center;
-  }
-
-  /* Page dropdown goes full width on second row */
-  .nav-dropdown-mobile {
-    grid-column: 1 / -1;
-    margin-left: 0;
   }
 }

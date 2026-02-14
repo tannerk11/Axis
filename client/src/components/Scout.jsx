@@ -6,84 +6,10 @@ import TeamRadarChart from './TeamRadarChart';
 import SeasonTrajectoryChart from './SeasonTrajectoryChart';
 import BoxScoreModal from './BoxScoreModal';
 import Matchup from './Matchup';
-
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
-
-// Normalize year values to consistent format
-const normalizeYear = (year) => {
-  if (!year) return '-';
-  const y = year.toLowerCase().trim().replace('.', '');
-  if (y === 'fr' || y === 'freshman') return 'Fr';
-  if (y === 'so' || y === 'sophomore') return 'So';
-  if (y === 'jr' || y === 'junior') return 'Jr';
-  if (y === 'sr' || y === 'senior') return 'Sr';
-  if (y === 'gr' || y === 'grad' || y === 'grad senior' || y === 'graduate') return 'Gr';
-  if (y.includes('r-') || y.includes('rs ') || y.includes('redshirt')) return 'RS';
-  return year;
-};
-
-// Normalize position values to consistent format
-const normalizePosition = (pos) => {
-  if (!pos) return '-';
-  const p = pos.toLowerCase().trim();
-  if (p === 'guard' || p === 'g') return 'G';
-  if (p === 'forward' || p === 'f') return 'F';
-  if (p === 'center' || p === 'c') return 'C';
-  if (p === 'point guard' || p === 'pg') return 'PG';
-  if (p === 'shooting guard' || p === 'sg') return 'SG';
-  if (p === 'small forward' || p === 'sf') return 'SF';
-  if (p === 'power forward' || p === 'pf') return 'PF';
-  if (p === 'g/f' || p === 'guard/forward') return 'G/F';
-  if (p === 'f/c' || p === 'forward/center') return 'F/C';
-  if (p === 'w' || p === 'wing') return 'W';
-  return pos.toUpperCase();
-};
-
-// Stat tooltips for header hover descriptions
-const TOOLTIPS = {
-  games_played: 'Games Played - Total NAIA games played this season',
-  record: 'Win-Loss Record',
-  win_pct: 'Win Percentage',
-  net_rating: 'Net Rating (ORTG - DRTG) - Points scored minus points allowed per 100 possessions. Shows overall team efficiency margin.',
-  offensive_rating: 'Offensive Rating - Points scored per 100 possessions. Higher is better.',
-  defensive_rating: 'Defensive Rating - Points allowed per 100 possessions. Lower is better.',
-  points_per_game: 'Points Per Game',
-  points_allowed_per_game: 'Points Allowed Per Game',
-  efg_pct: 'Effective Field Goal % - Adjusts FG% to account for 3-pointers being worth more. Formula: (FGM + 0.5 × 3PM) / FGA',
-  fg_pct: 'Field Goal Percentage',
-  fg3_pct: 'Three-Point Field Goal Percentage',
-  ft_pct: 'Free Throw Percentage',
-  three_pt_rate: '3-Point Rate - Percentage of field goal attempts that are 3-pointers. Shows how often a team shoots from deep.',
-  ft_rate: 'Free Throw Rate - Free throw attempts per field goal attempt. Shows ability to get to the line.',
-  pts_paint_per_game: 'Points in Paint Per Game - Shows inside scoring ability.',
-  pts_fastbreak_per_game: 'Fastbreak Points Per Game - Shows transition offense success.',
-  reb_per_game: 'Rebounds Per Game',
-  oreb_per_game: 'Offensive Rebounds Per Game',
-  dreb_per_game: 'Defensive Rebounds Per Game',
-  oreb_pct: 'Offensive Rebound % - Percentage of available offensive rebounds grabbed. Shows second-chance opportunity creation.',
-  dreb_pct: 'Defensive Rebound % - Percentage of available defensive rebounds grabbed. Shows ability to end opponent possessions.',
-  oreb_pct_opp: 'Opponent Offensive Rebound % - Percentage of offensive rebounds allowed to opponent. Lower is better.',
-  stl_per_game: 'Steals Per Game',
-  blk_per_game: 'Blocks Per Game',
-  to_per_game: 'Turnovers Per Game. Lower is better.',
-  ast_per_game: 'Assists Per Game',
-  pf_per_game: 'Personal Fouls Per Game',
-  ast_to_ratio: 'Assist-to-Turnover Ratio - Higher values indicate better ball control and decision making.',
-  possessions_per_game: 'Possessions Per Game - Estimates game tempo. Higher = faster pace, more possessions per game.',
-  efg_pct_opp: 'Opponent eFG% - Measures defensive effectiveness at limiting efficient shooting. Lower is better.',
-  to_rate: 'Turnover Rate - Turnovers per 100 possessions. Lower is better.',
-  to_rate_opp: 'Opponent Turnover Rate - Turnovers forced per 100 opponent possessions. Higher is better (more forced turnovers).',
-  stl_pct: 'Steal Percentage - Steals per 100 opponent possessions',
-  blk_pct: 'Block Percentage - Blocks per 100 opponent 2-point attempts',
-  fg_pct_opp: 'Opponent FG% - Field goal percentage allowed',
-  fg3_pct_opp: 'Opponent 3P% - Three-point percentage allowed',
-  pts_second_chance_per_game: 'Second Chance Points Per Game',
-  pts_off_to_per_game: 'Points Off Turnovers Per Game',
-  pts_second_chance_per_game_opp: 'Opponent Second Chance Points Per Game',
-  pts_off_to_per_game_opp: 'Opponent Points Off Turnovers Per Game',
-  pts_paint_per_game_opp: 'Opponent Points in Paint Per Game',
-  pts_fastbreak_per_game_opp: 'Opponent Fastbreak Points Per Game',
-};
+import { API_URL } from '../utils/api';
+import { normalizeYear, normalizePosition } from '../utils/normalizers';
+import SkeletonLoader from './SkeletonLoader';
+import { TOOLTIPS } from '../utils/tooltips';
 
 // Stat group configurations
 const STAT_GROUPS = {
@@ -513,7 +439,7 @@ function Scout({ league, season, teams = [], conferences = [] }) {
           <p>Select a team above to view their scouting report</p>
         </div>
       ) : loading ? (
-        <div className="scout-loading">Loading team data...</div>
+        <SkeletonLoader variant="card" rows={6} />
       ) : selectedTeam ? (
         <div className="scout-content">
           {/* Team Header Card */}

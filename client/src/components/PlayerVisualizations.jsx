@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import PlayerScatterChart from './PlayerScatterChart';
+import SkeletonLoader from './SkeletonLoader';
 import './PlayerVisualizations.css';
 
 // Tab configuration
@@ -12,8 +13,9 @@ const TABS = [
 
 const MIN_GAMES = 5;
 const MIN_MINUTES = 10;
+const ALL_CONF_LIMIT = 150; // Max players per chart when viewing all conferences
 
-function PlayerVisualizations({ players, loading }) {
+function PlayerVisualizations({ players, loading, isAllConferences }) {
   const [activeTab, setActiveTab] = useState('scoring');
 
   // Use all players passed in (filtering is done by parent via filter bar)
@@ -30,33 +32,45 @@ function PlayerVisualizations({ players, loading }) {
     return filtered.sort((a, b) => (b.pts_pg || 0) - (a.pts_pg || 0));
   }, [players]);
 
+  // Helper: when viewing all conferences, keep only the top N players by a given sort key
+  const capPlayers = (list, sortKey) => {
+    if (!isAllConferences || list.length <= ALL_CONF_LIMIT) return list;
+    return [...list]
+      .sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0))
+      .slice(0, ALL_CONF_LIMIT);
+  };
+
   // Scoring players (PPG vs FG%)
   const scoringPlayers = useMemo(() => {
-    return baseFilteredPlayers.filter(p => 
+    const filtered = baseFilteredPlayers.filter(p => 
       p.pts_pg != null && p.fg_pct != null && p.fga >= 50
     );
-  }, [baseFilteredPlayers]);
+    return capPlayers(filtered, 'pts_pg');
+  }, [baseFilteredPlayers, isAllConferences]);
 
   // Playmaking players (AST vs TO ratio)
   const playmakingPlayers = useMemo(() => {
-    return baseFilteredPlayers.filter(p => 
+    const filtered = baseFilteredPlayers.filter(p => 
       p.ast_pg != null && p.to_pg != null && p.ast >= 20
     );
-  }, [baseFilteredPlayers]);
+    return capPlayers(filtered, 'ast_pg');
+  }, [baseFilteredPlayers, isAllConferences]);
 
   // Shooting players (3PM vs 3P%)
   const shootingPlayers = useMemo(() => {
-    return baseFilteredPlayers.filter(p => 
+    const filtered = baseFilteredPlayers.filter(p => 
       p.fg3m != null && p.fg3_pct != null && p.fg3a >= 30
     );
-  }, [baseFilteredPlayers]);
+    return capPlayers(filtered, 'fg3m');
+  }, [baseFilteredPlayers, isAllConferences]);
 
   // Rebounding players
   const reboundingPlayers = useMemo(() => {
-    return baseFilteredPlayers.filter(p => 
+    const filtered = baseFilteredPlayers.filter(p => 
       p.oreb_pg != null && p.dreb_pg != null && p.reb >= 30
     );
-  }, [baseFilteredPlayers]);
+    return capPlayers(filtered, 'reb_pg');
+  }, [baseFilteredPlayers, isAllConferences]);
 
   // Format functions - percentages are stored as whole numbers (45.6 = 45.6%)
   const pctFormat = (v) => `${parseFloat(v).toFixed(1)}%`;
@@ -64,7 +78,7 @@ function PlayerVisualizations({ players, loading }) {
   const intFormat = (v) => Math.round(parseFloat(v)).toString();
 
   if (loading) {
-    return <div className="loading">Loading visualizations...</div>;
+    return <SkeletonLoader variant="card" rows={4} />;
   }
 
   if (!players || players.length === 0) {

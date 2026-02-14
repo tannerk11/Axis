@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import './ConferenceModal.css';
 import TeamLogo from './TeamLogo';
-
-const API_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.PROD ? '' : 'http://localhost:3001');
+import { API_URL } from '../utils/api';
+import SkeletonLoader from './SkeletonLoader';
+import useFocusTrap from '../hooks/useFocusTrap';
 
 // Helper to format date as YYYY-MM-DD for API
 const formatDateForAPI = (date) => {
@@ -23,6 +24,7 @@ const formatDateForDisplay = (date) => {
 };
 
 function ConferenceModal({ conferenceName, league, season, onClose, onTeamClick }) {
+  const focusTrapRef = useFocusTrap();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -143,13 +145,13 @@ function ConferenceModal({ conferenceName, league, season, onClose, onTeamClick 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="conference-modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="modal-close" onClick={onClose}>×</button>
+    <div className="modal-overlay" onClick={onClose} role="presentation">
+      <div className="conference-modal-content" onClick={(e) => e.stopPropagation()} ref={focusTrapRef} role="dialog" aria-modal="true" aria-labelledby="conference-modal-title">
+        <button className="modal-close" onClick={onClose} aria-label="Close modal">×</button>
 
         {/* Conference Header */}
         <div className="conference-modal-header">
-          <h2 className="conference-modal-title">{conferenceName}</h2>
+          <h2 id="conference-modal-title" className="conference-modal-title">{conferenceName}</h2>
           <span className="conference-modal-subtitle">
             {teams.length} Teams • {season} Season
           </span>
@@ -158,7 +160,7 @@ function ConferenceModal({ conferenceName, league, season, onClose, onTeamClick 
         {/* Teams Table */}
         <div className="conference-modal-body">
           {loading ? (
-            <div className="modal-loading">Loading teams...</div>
+            <SkeletonLoader variant="modal" />
           ) : sortedTeams.length === 0 ? (
             <div className="modal-no-data">No teams found</div>
           ) : (
@@ -236,7 +238,7 @@ function ConferenceModal({ conferenceName, league, season, onClose, onTeamClick 
 
             <div className="schedule-games">
               {gamesLoading ? (
-                <div className="games-loading">Loading games...</div>
+                <SkeletonLoader variant="table" rows={4} />
               ) : games.length === 0 ? (
                 <div className="no-games">No games scheduled for this date</div>
               ) : (
