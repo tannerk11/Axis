@@ -18,6 +18,13 @@ export function ThemeProvider({ children }) {
     // Apply theme to document root
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
+
+    // Swap favicon based on theme
+    const favicon = document.querySelector('link[rel="icon"]');
+    if (favicon) {
+      favicon.type = 'image/svg+xml';
+      favicon.href = theme === 'dark' ? '/favicon-dark.svg' : '/favicon-light.svg';
+    }
   }, [theme]);
 
   const toggleTheme = () => {

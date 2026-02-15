@@ -1,5 +1,6 @@
 import './Header.css';
 import logoSrc from '../assets/logo.svg';
+import logoDarkSrc from '../assets/logo-dark.svg';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 
 function Header({ league, onLeagueChange, activePage, onPageChange, season, seasons, onSeasonChange, lastUpdated, hasPlayers }) {
@@ -25,7 +26,7 @@ function Header({ league, onLeagueChange, activePage, onPageChange, season, seas
       <header className="header-top">
         <div className="header-left">
           <div className="logo">
-            <img src={logoSrc} alt="Axis Analytics" className="logo-icon" />
+            <img src={theme === 'dark' ? logoDarkSrc : logoSrc} alt="Axis Analytics" className="logo-icon" />
             <span className="logo-text">Axis Analytics</span>
           </div>
         </div>
